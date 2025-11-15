@@ -1,6 +1,6 @@
 # 📚 Ebook: Blockchain Development para Programadores Experientes
 
-> **Do Zero ao Production em 23 Capítulos - 100% COMPLETO! 🎉**
+> **Do Zero ao Production em 24 Capítulos - 100% COMPLETO! 🎉**
 >
 > Um guia técnico e aprofundado sobre desenvolvimento blockchain/Web3 para desenvolvedores com 3+ anos de experiência.
 
@@ -31,19 +31,19 @@ Este ebook foi criado para desenvolvedores experientes que querem dominar blockc
 ✅ PARTE IV: INTEGRAÇÃO FULL-STACK (4/4 capítulos)
 ✅ PARTE V: PRODUÇÃO (4/4 capítulos)
 ✅ CONCLUSÃO (1/1 capítulo)
-✅ APÊNDICES (3/3)
+✅ APÊNDICES (4/4)
 
-TOTAL: 23/23 capítulos completos (100%)
+TOTAL: 24/24 capítulos completos (100%)
 ```
 
 **Estatísticas Finais:**
 
-- 📖 **~165,000 palavras**
-- 📄 **~550 páginas** (estimativa PDF)
-- 💻 **10,000+ linhas** de código
-- ⏱️ **~18-20 horas** de leitura
-- 🎯 **60+ exercícios** práticos
-- 📝 **200+ exemplos** de código
+- 📖 **~192,000 palavras**
+- 📄 **~640 páginas** (estimativa PDF)
+- 💻 **12,000+ linhas** de código
+- ⏱️ **~22-24 horas** de leitura
+- 🎯 **65+ exercícios** práticos
+- 📝 **250+ exemplos** de código
 
 ---
 
@@ -457,6 +457,31 @@ TOTAL: 23/23 capítulos completos (100%)
 
 ---
 
+#### ✅ [Apêndice D: Liquid Network - Sidechain Bitcoin](EBOOK_APENDICE_D_LIQUID_NETWORK.md)
+
+**Desenvolvimento Completo no Liquid Network**
+
+- Introdução ao Liquid Network e arquitetura
+- Strong Federations (modelo de consenso com 15 functionaries)
+- Confidential Transactions (privacidade via Pedersen Commitments)
+- LBTC e mecanismo de peg (peg-in/peg-out completo)
+- Issued Assets nativos (tokens sem smart contracts)
+- USDT e stablecoins no Liquid
+- Setup e ambiente de desenvolvimento (Elements)
+- SDKs e APIs (GDK, LWK, Libwally, Blockstream AMP)
+- Simplicity - smart contracts com verificação formal
+- Desenvolvimento de wallets (código completo TypeScript/Rust)
+- Emissão de assets (do código ao registry, com proof de domínio)
+- Comparativo detalhado: Liquid vs Lightning vs Rootstock
+- Casos de uso (trading, stablecoins, securities, DeFi)
+- Segurança e trade-offs (modelo de confiança, riscos)
+- Roadmap de aprendizado (projetos sugeridos)
+
+**Tempo de leitura**: ~90 minutos | **Nível**: Intermediário-Avançado | **Código**: 2.000+ linhas
+**Uso**: Guia completo para desenvolver no Bitcoin L2
+
+---
+
 ## 🎓 Como Usar Este Ebook
 
 ### Caminho Recomendado (Linear)
@@ -482,7 +507,7 @@ TOTAL: 23/23 capítulos completos (100%)
    ↓
 10. Cap 20 (Próximos Passos)
    ↓
-11. Apêndices A-C (Referência)
+11. Apêndices A-D (Referência)
 ```
 
 ### Caminho Rápido (Essenciais)

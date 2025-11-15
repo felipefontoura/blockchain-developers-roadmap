@@ -30,12 +30,12 @@ Ebook técnico e aprofundado sobre desenvolvimento blockchain/Web3, especificame
 
 ### Status Atual
 
-**✅ COMPLETO** - 23/23 capítulos finalizados
+**✅ COMPLETO** - 24/24 capítulos finalizados
 
-- **Total de palavras**: ~165.000
-- **Páginas estimadas**: ~550 páginas
-- **Linhas de código**: 10.000+
-- **Termos no glossário**: 300+
+- **Total de palavras**: ~192.000
+- **Páginas estimadas**: ~640 páginas
+- **Linhas de código**: 12.000+
+- **Termos no glossário**: 350+
 
 ### Diferencial
 
@@ -91,9 +91,10 @@ PARTE V: PRODUÇÃO
 APÊNDICES
 ├── Apêndice A: Comparativo Chains     [✓] 100%
 ├── Apêndice B: Glossário Completo     [✓] 100%
-└── Apêndice C: Recursos               [✓] 100%
+├── Apêndice C: Recursos               [✓] 100%
+└── Apêndice D: Liquid Network         [✓] 100%
 
-PROGRESSO TOTAL: 23/23 capítulos (100%) ✅
+PROGRESSO TOTAL: 24/24 capítulos (100%) ✅
 ```
 
 ### Arquivos do Projeto
@@ -138,7 +139,8 @@ blockchain-roadmap/
 └── APÊNDICES
     ├── EBOOK_APENDICE_A_COMPARATIVO.md
     ├── EBOOK_APENDICE_B_GLOSSARIO.md
-    └── EBOOK_APENDICE_C_RECURSOS.md
+    ├── EBOOK_APENDICE_C_RECURSOS.md
+    └── EBOOK_APENDICE_D_LIQUID_NETWORK.md
 ```
 
 ---
@@ -404,6 +406,25 @@ blockchain-roadmap/
 - Ferramentas
 - Como se manter atualizado
 - Hackathons e bug bounties
+
+#### Apêndice D: Liquid Network - Sidechain Bitcoin
+**Status**: ✅ Completo (~27.000 palavras, ~90 páginas)
+
+**Conteúdo**:
+- Introdução ao Liquid Network e arquitetura
+- Strong Federations (modelo de consenso)
+- Confidential Transactions (privacidade)
+- LBTC e mecanismo de peg (peg-in/peg-out)
+- Issued Assets nativos
+- USDT e stablecoins no Liquid
+- Setup e ambiente de desenvolvimento
+- SDKs e APIs (GDK, LWK, AMP)
+- Simplicity - smart contracts verificáveis
+- Desenvolvimento de wallets (código completo)
+- Emissão de assets (do código ao registry)
+- Comparativo: Liquid vs Lightning vs Rootstock
+- Casos de uso e ecossistema
+- Segurança e trade-offs
 
 ---
 
@@ -915,11 +936,17 @@ Use esta checklist ao atualizar qualquer capítulo:
 
 ## Controle de Versão
 
-**Versão deste documento**: 2.0
+**Versão deste documento**: 2.1
 **Data de criação**: 2024-11-14
 **Última atualização**: 2024-11-14
 
 ### Changelog
+
+- **v2.1** (2024-11-14):
+  - ✅ Adicionado Apêndice D: Liquid Network (~27.000 palavras)
+  - Total agora: 24/24 capítulos (100%)
+  - Total de palavras: ~192.000
+  - Cobertura completa: Liquid Network, LBTC, Issued Assets, USDT, Simplicity, desenvolvimento de wallets
 
 - **v2.0** (2024-11-14):
   - ✅ Ebook completo (23/23 capítulos, 100%)
