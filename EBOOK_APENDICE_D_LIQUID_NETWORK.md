@@ -994,6 +994,543 @@ Emissor: Bull Bitcoin
 | **Compliance** | 🔴 Difícil (público) | 🟢 Unblinding seletivo |
 | **Bugs de contrato** | 🔴 Possível | 🟢 N/A (nativo) |
 
+### DePix - Stablecoin BRL no Liquid e Lightning Network
+
+**Lançamento**: 2024
+**Emissor**: Eulen (desenvolvido em parceria com Joltz)
+
+**DePix** é a primeira stablecoin brasileira (BRL) emitida no ecossistema Bitcoin, operando de forma dual:
+- **Liquid Network**: Asset nativo com Confidential Transactions
+- **Lightning Network**: Via Taproot Assets para pagamentos instantâneos
+
+#### 📖 Glossário de Termos
+
+**DePix (Decentralized PIX)**
+> Stablecoin atrelada ao Real Brasileiro (BRL) na paridade 1:1, emitida como asset nativo no Liquid e como Taproot Asset no Bitcoin/Lightning.
+>
+> **Analogia Web2**: Como um API wrapper que conecta PIX (sistema de pagamentos brasileiro) com blockchain Bitcoin.
+>
+> **Por que existe**: Permitir transações em reais com privacidade, rapidez e integração nativa com ecossistema Bitcoin.
+
+**Taproot Assets**
+> Protocolo desenvolvido pela Lightning Labs que permite emitir assets (tokens) diretamente no Bitcoin usando Taproot, com suporte nativo à Lightning Network.
+>
+> **Diferença-chave**: Assets vivem no Bitcoin mainnet (não sidechain), mas herdam suas propriedades via Taproot.
+>
+> **Trade-off**: Mais descentralizado que Liquid, mas ainda em estágio inicial de adoção.
+
+**Banking Nodes**
+> Entidades intermediárias no ecossistema DePix responsáveis por processar entrada/saída de capital fiat (BRL) e manter colaterais diversos.
+>
+> **Analogia Web2**: Como payment gateways (Stripe, PayPal) que conectam fiat com digital.
+>
+> **Papel**: Mitigar risco de custódia centralizada distribuindo operações entre múltiplos nós.
+
+**PIX**
+> Sistema de pagamentos instantâneos brasileiro (lançado em 2020 pelo Banco Central), permite transferências 24/7 em segundos.
+>
+> **Contexto**: PIX processou 42 bilhões de transações em 2023, tornando-se método dominante no Brasil.
+
+#### Arquitetura Técnica - Dual Layer
+
+**Camada 1: Liquid Network (Confidential Asset)**
+
+DePix foi inicialmente emitido como Issued Asset no Liquid:
+
+```bash
+# Asset ID do DePix no Liquid (exemplo - verificar registry atual)
+DEPIX="[asset_id_sera_publicado_no_registry]"
+
+# Obter saldo de DePix
+elements-cli getbalance "*" 1 false "$DEPIX"
+
+# Enviar DePix (confidencial)
+elements-cli sendtoaddress \
+  "$RECIPIENT_ADDRESS" \
+  100.00 \
+  "" "" false false 1 "UNSET" false \
+  "$DEPIX"
+
+# Transação é confidencial:
+# - Valor oculto para observadores externos
+# - Asset type oculto (pode ser DePix, USDT, ou qualquer outro)
+# - Apenas remetente e destinatário veem valores reais
+```
+
+**Vantagens do Liquid para DePix**:
+- ✅ Transações confidenciais (privacidade financeira)
+- ✅ Confirmações rápidas (~1-2 min)
+- ✅ Taxas baixas e previsíveis
+- ✅ Atomic swaps nativos com LBTC e outras stablecoins
+
+**Camada 2: Lightning Network (Taproot Assets)**
+
+DePix também existe como Taproot Asset, sendo a **primeira stablecoin brasileira no Lightning**:
+
+```javascript
+// Usando Joltz SDK (JavaScript/TypeScript)
+import { JoltzClient } from '@joltz/sdk';
+
+const client = new JoltzClient({
+  network: 'mainnet'
+});
+
+// Receber DePix via Lightning
+const invoice = await client.createInvoice({
+  assetId: 'depix_taproot_asset_id',
+  amount: 100.00, // 100 BRL
+  description: 'Pagamento produto X'
+});
+
+// Enviar DePix via Lightning
+const payment = await client.sendPayment({
+  invoice: lightningInvoice,
+  assetId: 'depix',
+  amount: 50.00
+});
+
+// Swap DePix → Lightning BTC (atomic)
+const swap = await client.atomicSwap({
+  from: 'depix',
+  to: 'btc',
+  amount: 100.00
+});
+```
+
+**Vantagens do Taproot Assets para DePix**:
+- ✅ Pagamentos instantâneos (subsegundo via Lightning)
+- ✅ Taxas mínimas (satoshis por transação)
+- ✅ Descentralização do Bitcoin mainnet
+- ✅ Interoperabilidade com ecossistema Lightning
+
+#### Modelo de Colateral e Banking Nodes
+
+**Token Issuer Entity (TIE)**: Entidade responsável pela emissão do DePix
+
+**Modelo de Lastro 1:1**:
+- Cada DePix emitido possui 1 BRL em reserva
+- Colateral mantido em múltiplos formatos:
+  - **Reais** em contas bancárias fiduciárias
+  - **Bitcoin** como colateral adicional
+  - **USD ou Ouro** conforme Banking Node
+  - **Diversificação jurisdicional** (forex hedge)
+
+**Banking Nodes - Arquitetura Descentralizada**:
+
+```
+┌─────────────┐
+│   Usuário   │
+│  (Brasil)   │
+└──────┬──────┘
+       │ 1. PIX: 100 BRL
+       ▼
+┌──────────────────┐
+│  Banking Node A  │ ◄── KYC/AML compliance
+│   (São Paulo)    │     API conectada com TIE
+└────────┬─────────┘
+         │ 2. Notifica TIE
+         ▼
+┌──────────────────┐
+│       TIE        │
+│  (Emissão DePix) │
+└────────┬─────────┘
+         │ 3. Emite 100 DePix
+         ▼
+┌──────────────────┐
+│ Wallet do Usuário│
+│  (Liquid/Taproot)│
+└──────────────────┘
+```
+
+**Fluxo de Emissão (Peg-In)**:
+1. Usuário transfere BRL via PIX para Banking Node
+2. Banking Node valida e notifica TIE via API
+3. TIE emite quantidade equivalente de DePix
+4. DePix enviado à carteira do usuário (Liquid ou Lightning)
+5. Banking Node transfere BRL para conta fiduciária da TIE
+
+**Fluxo de Resgate (Peg-Out)**:
+1. Usuário envia DePix para endereço do Banking Node
+2. Banking Node valida e queima tokens (burn)
+3. TIE confirma destruição
+4. Banking Node transfere BRL via PIX para usuário
+
+#### Integração com PIX - Pix2DePix API
+
+**Eulen** desenvolveu API RESTful para conectar PIX ↔ DePix:
+
+```bash
+# Endpoint: https://api.eulen.app/pix2depix
+
+# Gerar QR Code PIX para comprar DePix
+curl -X POST https://api.eulen.app/pix2depix/generate \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "amount": 100.00,
+    "currency": "BRL",
+    "destination": "liquid_address_or_lightning_invoice",
+    "asset": "depix"
+  }'
+
+# Resposta:
+{
+  "pix_qr_code": "00020126...EMV_QR_CODE",
+  "pix_copy_paste": "00020126...",
+  "expiration": 600,  // segundos
+  "reference_id": "uuid-v4"
+}
+```
+
+**Integração com BTCPay Server**:
+
+DePix possui plugin oficial para BTCPay Server, permitindo merchants brasileiros aceitarem PIX com settlement em DePix:
+
+```yaml
+# btcpayserver-depix-plugin
+version: 2.1.6+
+
+# Instalação
+1. BTCPay Server → Wallets → Add Wallet
+2. Selecionar "DePix Plugin"
+3. Configurar API Key (https://depix.info/#partners)
+4. Opcional: Webhook via Telegram bot
+
+# Fluxo de pagamento
+Cliente: Escolhe "Pix" no checkout
+        ↓
+        Escaneia QR Code PIX
+        ↓
+Merchant: Recebe DePix em wallet Liquid
+          (conversível para LBTC, USDT, etc.)
+```
+
+#### Casos de Uso Práticos
+
+**1. E-commerce Brasileiro com Settlement Soberano**
+
+```javascript
+// Merchant aceita PIX, recebe DePix, converte para LBTC
+const checkout = await btcpay.createInvoice({
+  amount: 250.00,
+  currency: 'BRL',
+  settlementAsset: 'depix'
+});
+
+// Após receber DePix, swap automático para LBTC
+await liquidWallet.atomicSwap({
+  from: 'depix',
+  to: 'lbtc',
+  amount: checkoutAmount
+});
+```
+
+**2. Remessas Internacionais (Brasil → Exterior)**
+
+```
+Remetente (Brasil):
+  PIX (BRL) → Banking Node → DePix (Liquid)
+                                    ↓
+                            Atomic Swap
+                                    ↓
+                            USDT ou LBTC
+                                    ↓
+                          Destinatário (exterior)
+                          Recebe USDT/BTC
+```
+
+**3. Transações P2P Privadas**
+
+```bash
+# Alice (Brasil) paga Bob (Brasil) sem expor valores
+# Usando Confidential Transactions no Liquid
+
+alice$ elements-cli sendtoaddress \
+  "$BOB_LIQUID_ADDRESS" \
+  500.00 \
+  "" "" false false 1 "UNSET" false \
+  "$DEPIX_ASSET_ID"
+
+# Observadores da blockchain veem:
+# - Transação ocorreu
+# - NÃO veem: valor transferido (500 BRL)
+# - NÃO veem: qual asset (pode ser DePix, USDT, LBTC...)
+```
+
+**4. Gestão Fiscal com Privacidade**
+
+Traders que operam cripto no Brasil podem usar DePix para:
+- Realizar operações privadas (Confidential Transactions)
+- Converter ganhos para BRL sem exposição pública
+- Manter compliance (unblinding para autoridades se necessário)
+
+#### Comparação: DePix vs Outras Stablecoins BRL
+
+| Aspecto | DePix | BRZ (Transfero) | BRLA (Outras) |
+|---------|-------|-----------------|---------------|
+| **Blockchain** | Liquid + Taproot Assets | Ethereum, Solana, Polygon | Ethereum, BSC |
+| **Privacidade** | 🟢 Confidencial (Liquid CT) | 🔴 Pública | 🔴 Pública |
+| **Velocidade** | 🟢 1-2 min (Liquid), <1s (Lightning) | 🟡 15s-2min | 🟡 15s-2min |
+| **Custos TX** | 🟢 Baixo (~cents) | 🔴 Alto (gas variável) | 🔴 Alto (gas) |
+| **Lightning** | 🟢 Sim (Taproot Assets) | 🔴 Não | 🔴 Não |
+| **PIX Integration** | 🟢 API nativa (Pix2DePix) | 🟡 Via parceiros | 🟡 Via parceiros |
+| **Descentralização** | 🟡 Federada (Liquid) + Bitcoin (Taproot) | 🔴 Centralizada | 🔴 Centralizada |
+| **Colateral** | 🟢 Diversificado (BRL, BTC, USD, ouro) | 🟡 BRL em bancos | 🟡 BRL em bancos |
+| **Auditoria** | 🟡 Selective disclosure | 🟢 Auditorias públicas | 🟡 Varia |
+| **Adoption** | 🟡 Early stage (2024) | 🟢 Estabelecida | 🟡 Média |
+
+#### Trade-offs e Limitações
+
+**⚠️ Considerações Importantes**:
+
+1. **Não é poupança**: DePix é token **transitório** (3T - Transient Tactful Token)
+   - Use para transações, não para armazenamento longo prazo
+   - BRL já sofre inflação (~4-8% ao ano)
+   - Converta para Bitcoin se objetivo é preservação de valor
+
+2. **Custódia em Banking Nodes**:
+   - Risco de bloqueio judicial do colateral fiat
+   - Mitigado por diversificação entre múltiplos nós
+   - Nós em diferentes jurisdições reduzem risco
+
+3. **Escala Limitada (inicial)**:
+   - Volumes grandes podem ter dificuldade de conversão
+   - Depende de liquidez dos Banking Nodes
+   - Tendência de melhoria com crescimento do ecossistema
+
+4. **KYC/AML Necessário**:
+   - Para peg-in/out (conversão BRL ↔ DePix)
+   - Exigência regulatória brasileira
+   - Transações on-chain permanecem confidenciais
+
+**🔒 Security Considerations**:
+
+```markdown
+## Security Checklist: Usando DePix
+
+- [ ] Use para transações, não como reserva de valor longo prazo
+- [ ] Verifique asset ID correto antes de receber DePix
+- [ ] Para grandes volumes, divida entre múltiplos Banking Nodes
+- [ ] Mantenha backup de chaves privadas (como qualquer crypto)
+- [ ] Em Liquid: guarde blinding keys para provar posse de fundos
+- [ ] Valide integridade de wallets (Joltz, SideSwap, Green)
+- [ ] Para merchants: configure webhooks para confirmações automáticas
+```
+
+#### Roadmap Técnico (Baseado em Whitepaper)
+
+**Implementado (2024)**:
+- ✅ Emissão como Liquid Asset
+- ✅ Emissão como Taproot Asset (Lightning)
+- ✅ API Pix2DePix (Eulen)
+- ✅ Plugin BTCPay Server
+- ✅ Integração SideSwap DEX
+- ✅ Wallet Joltz (primeira non-custodial Taproot Assets)
+
+**Roadmap Futuro**:
+- 🔄 **Protocolo Niti**: Smart contracts descentralizados para automação de paridade
+- 🔄 **RGB Tokens**: Segunda camada Bitcoin (cliente-side validation)
+- 🔄 **Expansão Banking Nodes**: Maior descentralização geográfica
+- 🔄 **APIs para Devs**: SDKs em múltiplas linguagens
+- 🔄 **DeFi Primitives**: AMMs, lending com DePix no Liquid
+
+#### Recursos para Desenvolvedores
+
+**Documentação Oficial**:
+- Site: https://www.depix.info/
+- API Docs: https://docs.eulen.app/ (Pix2DePix API)
+- GitHub: https://github.com/eulen-repo/DePix
+- Whitepaper: [GitHub - depix_whitepaper-pt_BR.org](https://github.com/eulen-repo/DePix/blob/main/whitepaper/)
+
+**Ferramentas e SDKs**:
+- **Joltz SDK**: SDK para Taproot Assets (JavaScript/TypeScript)
+  - NPM: `@joltz/sdk`
+  - Docs: https://docs.joltz.io/
+- **Elements RPC**: Para interação com DePix no Liquid
+- **BTCPay Plugin**: https://github.com/btcpayserver-plugin-depix
+
+**Exchanges/DEX**:
+- **SideSwap**: DEX nativo Liquid (swap DePix ↔ LBTC, USDT)
+- **P2PLand**: P2P marketplace
+- **Enor**: Compra/venda fiat e crypto
+
+**Parcerias Chave**:
+- **Eulen**: Desenvolvedor principal e Banking Node
+- **Joltz**: Wallet e SDK para Taproot Assets
+- **Lightning Labs**: Protocolo Taproot Assets
+- **Blockstream**: Liquid Network infrastructure
+- **Plebank**: Parceiro bancário
+
+#### Exemplo Completo: Integrar DePix em Aplicação
+
+**Caso**: E-commerce brasileiro aceita PIX, recebe DePix
+
+```javascript
+// backend/depix-integration.js
+import express from 'express';
+import { ElementsClient } from 'elements-rpc';
+import axios from 'axios';
+
+const app = express();
+const elements = new ElementsClient({
+  host: 'localhost',
+  port: 7041,
+  username: 'user',
+  password: 'pass'
+});
+
+const DEPIX_ASSET_ID = '[asset_id]';
+const EULEN_API_KEY = process.env.EULEN_API_KEY;
+
+// Endpoint: Criar pedido
+app.post('/api/checkout', async (req, res) => {
+  const { amount, customerEmail } = req.body;
+
+  // Gerar endereço Liquid para receber DePix
+  const address = await elements.getNewAddress();
+
+  // Gerar QR Code PIX via Eulen API
+  const pixResponse = await axios.post(
+    'https://api.eulen.app/pix2depix/generate',
+    {
+      amount,
+      currency: 'BRL',
+      destination: address,
+      asset: 'depix'
+    },
+    {
+      headers: { 'Authorization': `Bearer ${EULEN_API_KEY}` }
+    }
+  );
+
+  // Salvar pedido no DB
+  const order = await db.orders.create({
+    customerEmail,
+    amount,
+    liquidAddress: address,
+    pixQrCode: pixResponse.data.pix_qr_code,
+    pixCopyPaste: pixResponse.data.pix_copy_paste,
+    referenceId: pixResponse.data.reference_id,
+    status: 'pending'
+  });
+
+  res.json({
+    orderId: order.id,
+    pixQrCode: order.pixQrCode,
+    pixCopyPaste: order.pixCopyPaste,
+    expiresIn: 600 // 10 minutos
+  });
+});
+
+// Webhook: Confirmação de pagamento (via Eulen)
+app.post('/api/webhook/depix', async (req, res) => {
+  const { referenceId, txid, confirmed } = req.body;
+
+  if (confirmed) {
+    // Atualizar pedido
+    await db.orders.update({
+      where: { referenceId },
+      data: {
+        status: 'confirmed',
+        txid
+      }
+    });
+
+    // Processar pedido (enviar produto, etc.)
+    await processOrder(referenceId);
+
+    // Opcional: Converter DePix → LBTC automaticamente
+    const balance = await elements.getBalance('*', 1, false, DEPIX_ASSET_ID);
+    if (balance > 0) {
+      // Usar SideSwap API ou outro DEX para swap
+      await swapDePIXtoLBTC(balance);
+    }
+  }
+
+  res.sendStatus(200);
+});
+
+// Monitorar endereço Liquid (fallback se webhook falhar)
+async function monitorLiquidAddress(address, expectedAmount) {
+  const utxos = await elements.listUnspent(1, 9999999, [address]);
+
+  const depixUTXOs = utxos.filter(u => u.asset === DEPIX_ASSET_ID);
+  const total = depixUTXOs.reduce((sum, u) => sum + u.amount, 0);
+
+  if (total >= expectedAmount) {
+    return true; // Pagamento confirmado
+  }
+  return false;
+}
+
+app.listen(3000, () => console.log('Server running on port 3000'));
+```
+
+**Frontend (React)**:
+
+```jsx
+// components/CheckoutDePix.jsx
+import { QRCodeSVG } from 'qrcode.react';
+import { useState, useEffect } from 'react';
+
+export function CheckoutDePix({ amount, onComplete }) {
+  const [orderData, setOrderData] = useState(null);
+  const [status, setStatus] = useState('loading');
+
+  useEffect(() => {
+    // Criar pedido
+    fetch('/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount, customerEmail: user.email })
+    })
+      .then(res => res.json())
+      .then(data => {
+        setOrderData(data);
+        setStatus('waiting_payment');
+        pollOrderStatus(data.orderId);
+      });
+  }, []);
+
+  const pollOrderStatus = async (orderId) => {
+    const interval = setInterval(async () => {
+      const res = await fetch(`/api/orders/${orderId}/status`);
+      const { status } = await res.json();
+
+      if (status === 'confirmed') {
+        setStatus('confirmed');
+        clearInterval(interval);
+        onComplete();
+      }
+    }, 3000); // Check a cada 3s
+  };
+
+  const copyPixCode = () => {
+    navigator.clipboard.writeText(orderData.pixCopyPaste);
+    alert('Código PIX copiado!');
+  };
+
+  if (status === 'loading') return <div>Gerando pagamento...</div>;
+  if (status === 'confirmed') return <div>✅ Pagamento confirmado!</div>;
+
+  return (
+    <div className="checkout-depix">
+      <h3>Pague com PIX</h3>
+      <p>Valor: R$ {amount.toFixed(2)}</p>
+
+      <QRCodeSVG value={orderData.pixQrCode} size={256} />
+
+      <button onClick={copyPixCode}>
+        Copiar código PIX
+      </button>
+
+      <p>Aguardando pagamento...</p>
+      <p>Settlement: DePix (Liquid Network)</p>
+    </div>
+  );
+}
+```
+
 ---
 
 ## D.7 Desenvolvimento no Liquid - Setup e Ambiente
@@ -2453,6 +2990,120 @@ class CrossChainUSDT {
 - ~$100M em circulação
 - Usado por: traders, OTC desks, institucionais
 
+### Stablecoins Regionais
+
+**DePix (BRL - Brasil)**:
+
+Primeira stablecoin brasileira no ecossistema Bitcoin, operando dual-layer no Liquid e Lightning Network.
+
+```javascript
+// Integração DePix em e-commerce brasileiro
+class BrazilianCheckout {
+  async acceptPixPayment(amount: number, customerEmail: string) {
+    // 1. Gerar endereço Liquid para receber DePix
+    const liquidAddress = await this.wallet.getNewAddress();
+
+    // 2. Criar pedido via API Pix2DePix (Eulen)
+    const pixQR = await fetch('https://api.eulen.app/pix2depix/generate', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${API_KEY}` },
+      body: JSON.stringify({
+        amount,
+        currency: 'BRL',
+        destination: liquidAddress,
+        asset: 'depix'
+      })
+    });
+
+    // 3. Cliente paga via PIX (sistema brasileiro)
+    // 4. DePix automaticamente creditado na wallet Liquid
+    // 5. Merchant pode:
+    //    - Manter DePix (BRL na blockchain)
+    //    - Swap para LBTC (Bitcoin)
+    //    - Swap para USDT (dólar)
+
+    return {
+      pixQrCode: pixQR.data.pix_qr_code,
+      expiresIn: 600  // 10 minutos
+    };
+  }
+
+  async autoConvertToLBTC() {
+    // Converter DePix recebido para LBTC automaticamente
+    const depixBalance = await this.wallet.getBalance(DEPIX_ASSET_ID);
+
+    if (depixBalance > 0) {
+      // Atomic swap via SideSwap DEX
+      await this.sideswap.swap({
+        from: DEPIX_ASSET_ID,
+        to: LBTC_ASSET_ID,
+        amount: depixBalance
+      });
+
+      // Merchant agora tem Bitcoin preservando valor
+      // Cliente pagou em Reais via PIX (familiar, instantâneo)
+    }
+  }
+}
+```
+
+**Casos de Uso DePix**:
+
+1. **E-commerce com Settlement Soberano**:
+   - Aceitar PIX (140M+ usuários no Brasil)
+   - Receber stablecoin BRL com privacidade
+   - Converter para Bitcoin/USDT sem intermediários
+
+2. **Remessas Internacionais**:
+   ```
+   Brasil → Exterior
+   PIX → DePix → USDT/LBTC → Destinatário
+   Custo: ~0.1% (vs 5-10% remessas tradicionais)
+   Tempo: <10 minutos (vs 3-5 dias)
+   ```
+
+3. **Transações P2P Privadas**:
+   - Reais na blockchain com Confidential Transactions
+   - Valores ocultos de observadores externos
+   - Compliance seletivo (unblinding para auditoria)
+
+**Outras Stablecoins Regionais**:
+
+**EURx (EUR - Europa)**:
+```
+Emissor: Quantoz
+Asset ID: 18729918ab4bca843656f08d4dd877bed6641fbd596a0a963abbf199cfeb3cec
+Caso de uso: Trading institucional europeu com privacidade
+```
+
+**LCAD (CAD - Canadá)**:
+```
+Emissor: Bull Bitcoin
+Caso de uso: Pagamentos e savings em CAD com privacidade Bitcoin
+```
+
+**MEX (MXN - México)**:
+```
+Peso mexicano tokenizado
+Caso de uso: Remessas EUA → México com custos reduzidos
+```
+
+**Comparativo de Adoção (2024)**:
+
+| Stablecoin | Região | TVL Estimado | Principal Caso de Uso |
+|------------|--------|--------------|----------------------|
+| USDT | Global | ~$100M | Trading, OTC |
+| DePix | Brasil | Early stage | PIX → Crypto, E-commerce |
+| EURx | Europa | ~$10M | Trading institucional |
+| LCAD | Canadá | ~$5M | Savings, pagamentos |
+| MEX | México | Early stage | Remessas |
+
+**Vantagem das Regionais no Liquid**:
+- ✅ Privacidade (Confidential Transactions)
+- ✅ Interoperabilidade (atomic swaps entre stablecoins)
+- ✅ Custos baixos (ideal para volumes menores que USD)
+- ✅ Compliance (unblinding seletivo para reguladores)
+
 ### Securities e Tokenização
 
 **Blockstream Mining Notes (BMN)**:
@@ -2797,6 +3448,13 @@ class SecurityChecks {
 >
 > **Trade-off**: Privacidade vs tamanho da TX (~20x maior)
 
+**DePix (Decentralized PIX)**
+> Primeira stablecoin brasileira (BRL) emitida no ecossistema Bitcoin, operando dual-layer no Liquid Network e Lightning Network via Taproot Assets.
+>
+> **Paridade**: 1 DePix = 1 BRL
+> **Emissor**: Eulen (parceria com Joltz)
+> **Características**: Confidential Transactions (Liquid), pagamentos instantâneos (Lightning), integração nativa com PIX
+
 **Strong Federations**
 > Modelo de consenso onde grupo de entidades mutuamente desconfiadas (functionaries) operam a rede.
 >
@@ -2824,10 +3482,22 @@ class SecurityChecks {
 > **Tempo**: ~30-90 minutos
 > **Limitação**: Apenas Federation Members podem iniciar
 
+**PIX**
+> Sistema de pagamentos instantâneos brasileiro criado pelo Banco Central em 2020, permite transferências 24/7 em segundos.
+>
+> **Adoção**: 42 bilhões de transações em 2023
+> **Integração Blockchain**: DePix conecta PIX ao ecossistema Bitcoin/Liquid via API Pix2DePix
+
 **Issued Assets**
 > Tokens nativos criados no Liquid sem necessidade de smart contracts.
 >
 > **Vantagem**: Mesmo tratamento que LBTC (atomic swaps, multisig, etc.)
+
+**Banking Nodes**
+> Entidades intermediárias no ecossistema DePix que processam entrada/saída de capital fiat (BRL) e mantêm colaterais diversos.
+>
+> **Papel**: Mitigar risco de custódia centralizada distribuindo operações entre múltiplos nós
+> **Funções**: KYC/AML, API com TIE, diversificação de colateral
 
 **Blinding**
 > Processo criptográfico de ocultar valores e assets em transações Liquid.
@@ -2858,6 +3528,12 @@ class SecurityChecks {
 > Linguagem de alto nível (similar a Rust) que compila para Simplicity.
 >
 > **Objetivo**: Facilitar desenvolvimento de contratos verificáveis
+
+**Taproot Assets**
+> Protocolo desenvolvido pela Lightning Labs que permite emitir assets (tokens) diretamente no Bitcoin usando Taproot, com suporte nativo à Lightning Network.
+>
+> **Características**: Assets no Bitcoin mainnet, transações via Lightning, privacidade via Taproot
+> **Caso de uso**: DePix foi primeira stablecoin BRL emitida como Taproot Asset
 
 **Asset Registry**
 > Registro público de metadata de Issued Assets (nome, ticker, domínio emissor, etc.).
@@ -3226,7 +3902,7 @@ Contínuo:
 
 ---
 
-**Última Atualização**: 2024-11-14
+**Última Atualização**: 2025-11-14 (Adicionado: DePix - stablecoin BRL no Liquid/Lightning)
 
 ---
 
