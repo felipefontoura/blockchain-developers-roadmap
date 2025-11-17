@@ -104,7 +104,6 @@ blockchain-roadmap/
 ├── CLAUDE.md                          ← Este arquivo (guia de manutenção)
 ├── README.md                          ← Navegação e índice principal
 ├── BLOCKCHAIN_ROADMAP.md              ← Roadmap original (base)
-├── EBOOK_STATUS_FINAL.md             ← Status final e estatísticas
 │
 ├── PARTE I: FUNDAMENTOS TÉCNICOS
 │   ├── EBOOK_CAPITULO_1_BLOCKCHAIN_PARA_DEVS.md
@@ -152,9 +151,11 @@ blockchain-roadmap/
 **Objetivo**: Estabelecer base sólida sobre como blockchain funciona tecnicamente
 
 #### Capítulo 1: Blockchain para Desenvolvedores - O que Realmente Muda
+
 **Status**: ✅ Completo (~8.200 palavras, ~27 páginas)
 
 **Tópicos cobertos**:
+
 - Por que blockchain existe (problema de confiança descentralizada)
 - Comparação: Banco de dados tradicional vs Blockchain
 - Consenso distribuído (PoW vs PoS explicado tecnicamente)
@@ -162,9 +163,11 @@ blockchain-roadmap/
 - Casos de uso reais vs hype
 
 #### Capítulo 2: Anatomia da EVM - Como Funciona Por Baixo
+
 **Status**: ✅ Completo (~12.000 palavras, ~40 páginas)
 
 **Tópicos cobertos**:
+
 - EVM vs outras VMs (JVM, Python VM)
 - Stack-based architecture
 - Storage, Memory, Stack (modelo de dados)
@@ -174,9 +177,11 @@ blockchain-roadmap/
 - Glossário consolidado de 40+ termos Web3
 
 #### Capítulo 3: Solidity - A Linguagem e Suas Peculiaridades
+
 **Status**: ✅ Completo (~9.500 palavras, ~32 páginas)
 
 **Tópicos cobertos**:
+
 - Type system completo
 - Storage vs Memory vs Calldata
 - Structs, Arrays, Mappings
@@ -185,9 +190,11 @@ blockchain-roadmap/
 - Peculiaridades da linguagem
 
 #### Capítulo 4: Ambiente de Desenvolvimento Profissional
+
 **Status**: ✅ Completo (~7.800 palavras, ~26 páginas)
 
 **Tópicos cobertos**:
+
 - Hardhat vs Foundry (comparação detalhada)
 - Estrutura de projeto
 - Testing framework
@@ -201,9 +208,11 @@ blockchain-roadmap/
 **Objetivo**: Dominar desenvolvimento de smart contracts seguros e eficientes
 
 #### Capítulo 5: Design Patterns em Solidity
+
 **Status**: ✅ Completo (~8.500 palavras, ~28 páginas)
 
 **Tópicos cobertos**:
+
 - Access Control (Ownable, Role-based)
 - Checks-Effects-Interactions
 - Pull over Push (withdrawal pattern)
@@ -212,9 +221,11 @@ blockchain-roadmap/
 - Circuit breaker / Pause
 
 #### Capítulo 6: Testing - Unit, Integration, Fork Tests
+
 **Status**: ✅ Completo (~8.200 palavras, ~27 páginas)
 
 **Tópicos cobertos**:
+
 - Unit tests (Foundry e Hardhat)
 - Integration tests
 - Fork testing
@@ -223,9 +234,11 @@ blockchain-roadmap/
 - TDD para contratos
 
 #### Capítulo 7: Gas Optimization - Por Que e Como
+
 **Status**: ✅ Completo (~7.500 palavras, ~25 páginas)
 
 **Tópicos cobertos**:
+
 - Storage packing
 - Short-circuiting
 - Unchecked blocks
@@ -234,9 +247,11 @@ blockchain-roadmap/
 - Assembly (Yul)
 
 #### Capítulo 8: Security - Top 10 Vulnerabilidades
+
 **Status**: ✅ Completo (~10.500 palavras, ~35 páginas)
 
 **Tópicos cobertos**:
+
 - Reentrancy (The DAO hack)
 - Integer Overflow/Underflow
 - Access Control
@@ -253,9 +268,11 @@ blockchain-roadmap/
 **Objetivo**: Construir aplicações DeFi e entender protocolos avançados
 
 #### Capítulo 9: Tokens - ERC-20, ERC-721, ERC-1155
+
 **Status**: ✅ Completo (~8.800 palavras, ~29 páginas)
 
 **Tópicos cobertos**:
+
 - ERC-20 (fungible tokens)
 - ERC-721 (NFTs)
 - ERC-1155 (multi-token)
@@ -263,9 +280,11 @@ blockchain-roadmap/
 - IPFS para metadata
 
 #### Capítulo 10: DeFi Primitives - DEX, Lending, Staking
+
 **Status**: ✅ Completo (~9.200 palavras, ~31 páginas)
 
 **Tópicos cobertos**:
+
 - AMM (Uniswap V2)
 - Constant Product Formula
 - Lending protocols
@@ -273,17 +292,21 @@ blockchain-roadmap/
 - Impermanent loss
 
 #### Capítulo 11: Oracles e Dados Off-Chain
+
 **Status**: ✅ Completo (~7.200 palavras, ~24 páginas)
 
 **Tópicos cobertos**:
+
 - Chainlink (Price Feeds, VRF, Automation)
 - Oracle problem
 - Oracle manipulation attacks
 
 #### Capítulo 12: Upgradeable Contracts e Governança
+
 **Status**: ✅ Completo (~8.500 palavras, ~28 páginas)
 
 **Tópicos cobertos**:
+
 - Proxy patterns (Transparent vs UUPS vs Diamond)
 - Storage collision prevention
 - Governança on-chain (DAOs)
@@ -296,9 +319,11 @@ blockchain-roadmap/
 **Objetivo**: Conectar smart contracts com aplicações front-end/back-end
 
 #### Capítulo 13: Front-end Integration - Ethers.js e Web3
+
 **Status**: ✅ Completo (~9.000 palavras, ~30 páginas)
 
 **Tópicos cobertos**:
+
 - Ethers.js v6
 - Conectar wallet (MetaMask)
 - Enviar transações
@@ -306,26 +331,32 @@ blockchain-roadmap/
 - React hooks para Web3
 
 #### Capítulo 14: Indexing - The Graph, Event Listeners
+
 **Status**: ✅ Completo (~7.500 palavras, ~25 páginas)
 
 **Tópicos cobertos**:
+
 - The Graph (subgraphs)
 - Event listeners customizados
 - GraphQL queries
 
 #### Capítulo 15: Backend - APIs, IPFS, Databases
+
 **Status**: ✅ Completo (~8.200 palavras, ~27 páginas)
 
 **Tópicos cobertos**:
+
 - Node.js + Ethers.js
 - Webhooks para eventos blockchain
 - IPFS pinning
 - Arquitetura híbrida
 
 #### Capítulo 16: DevOps - CI/CD para Smart Contracts
+
 **Status**: ✅ Completo (~9.000 palavras, ~30 páginas)
 
 **Tópicos cobertos**:
+
 - GitHub Actions
 - Automated deployment
 - Gas reporting
@@ -338,9 +369,11 @@ blockchain-roadmap/
 **Objetivo**: Preparar para deploy em produção com confiança
 
 #### Capítulo 17: Auditoria e Segurança Avançada
+
 **Status**: ✅ Completo (~8.800 palavras, ~29 páginas)
 
 **Tópicos cobertos**:
+
 - Self-audit checklist
 - Ferramentas automatizadas
 - Auditoria profissional
@@ -348,27 +381,33 @@ blockchain-roadmap/
 - Formal verification
 
 #### Capítulo 18: Deployment Strategies
+
 **Status**: ✅ Completo (~7.800 palavras, ~26 páginas)
 
 **Tópicos cobertos**:
+
 - Testnet deployment
 - Mainnet deployment checklist
 - Multi-sig management
 - Phased rollout
 
 #### Capítulo 19: Monitoring e Incident Response
+
 **Status**: ✅ Completo (~8.000 palavras, ~27 páginas)
 
 **Tópicos cobertos**:
+
 - Monitoring on-chain
 - Alertas críticos
 - Incident response plan
 - Post-mortem de hacks
 
 #### Capítulo 20: Próximos Passos - L2s, Outras Chains
+
 **Status**: ✅ Completo (~8.500 palavras, ~28 páginas)
 
 **Tópicos cobertos**:
+
 - Layer 2s (Arbitrum, Optimism, zkSync)
 - Outras blockchains (Solana, Polkadot)
 - Cross-chain (bridges)
@@ -379,9 +418,11 @@ blockchain-roadmap/
 ### APÊNDICES
 
 #### Apêndice A: Comparativo - Ethereum vs Solana vs Polkadot
+
 **Status**: ✅ Completo (~10.000 palavras, ~33 páginas)
 
 **Conteúdo**:
+
 - Comparação detalhada de 10+ blockchains
 - Ethereum (L1 + L2s)
 - Solana, Polkadot, Cardano
@@ -389,17 +430,21 @@ blockchain-roadmap/
 - Decision tree para escolher chains
 
 #### Apêndice B: Glossário Técnico Completo
+
 **Status**: ✅ Completo (~15.000 palavras, ~50 páginas, 300+ termos)
 
 **Conteúdo**:
+
 - Dicionário alfabético A-Z
 - Todos os termos Web3 usados no ebook
 - Definições, analogias Web2, exemplos
 
 #### Apêndice C: Recursos e Comunidades
+
 **Status**: ✅ Completo (~8.000 palavras, ~27 páginas)
 
 **Conteúdo**:
+
 - Documentação oficial
 - Cursos recomendados
 - Comunidades (Discord, Twitter)
@@ -408,9 +453,11 @@ blockchain-roadmap/
 - Hackathons e bug bounties
 
 #### Apêndice D: Liquid Network - Sidechain Bitcoin
+
 **Status**: ✅ Completo (~27.000 palavras, ~90 páginas)
 
 **Conteúdo**:
+
 - Introdução ao Liquid Network e arquitetura
 - Strong Federations (modelo de consenso)
 - Confidential Transactions (privacidade)
@@ -465,22 +512,26 @@ O ebook deve ser revisado e atualizado nos seguintes casos:
 ### Prioridades de Manutenção
 
 **P0 - Crítico (Corrigir imediatamente)**:
+
 - Código vulnerável nos exemplos
 - Links quebrados para documentação oficial
 - Informações incorretas sobre segurança
 - Breaking changes que tornam código não-funcional
 
 **P1 - Alto (Corrigir em 1 semana)**:
+
 - Exemplos que não compilam
 - Versões desatualizadas de dependências críticas
 - Novos padrões de segurança importantes
 
 **P2 - Médio (Corrigir em 1 mês)**:
+
 - Otimizações desatualizadas (novas opcodes)
 - Ferramentas descontinuadas
 - Links para recursos secundários
 
 **P3 - Baixo (Próxima revisão trimestral)**:
+
 - Melhorias de texto
 - Exemplos adicionais
 - Recursos complementares
@@ -550,12 +601,14 @@ Atualizar CHANGELOG.md:
 #### Segurança (Cap 8, 17)
 
 **Monitorar**:
-- Rekt News (https://rekt.news/)
-- Smart Contract Weakness Classification (https://swcregistry.io/)
+
+- Rekt News (<https://rekt.news/>)
+- Smart Contract Weakness Classification (<https://swcregistry.io/>)
 - Trail of Bits blog
 - OpenZeppelin security advisories
 
 **Atualizar quando**:
+
 - Novo tipo de ataque descoberto
 - Ferramenta de auditoria nova/descontinuada
 - Mudanças em best practices
@@ -563,12 +616,14 @@ Atualizar CHANGELOG.md:
 #### Ferramentas (Cap 4, 6, 16)
 
 **Monitorar**:
+
 - Foundry releases
 - Hardhat releases
 - Ethers.js releases
 - Novas ferramentas de testing/auditoria
 
 **Atualizar quando**:
+
 - Breaking changes
 - Deprecations
 - Ferramentas melhores disponíveis
@@ -576,33 +631,39 @@ Atualizar CHANGELOG.md:
 #### DeFi (Cap 10, 11, 12)
 
 **Monitorar**:
+
 - Uniswap protocol updates
 - Novas primitives importantes
 - Mudanças em oracles (Chainlink)
 
 **Atualizar quando**:
+
 - Novos padrões amplamente adotados
 - Vulnerabilidades em padrões existentes
 
 #### Full-Stack (Cap 13, 14, 15)
 
 **Monitorar**:
+
 - Ethers.js/Web3.js updates
 - The Graph updates
 - Novas bibliotecas de integração
 
 **Atualizar quando**:
+
 - Breaking changes em APIs
 - Melhores práticas de integração mudam
 
 #### Multi-Chain (Cap 20, Apêndice A)
 
 **Monitorar**:
+
 - Novas L2s relevantes
 - Mudanças em chains existentes
 - Cross-chain bridges
 
 **Atualizar quando**:
+
 - Nova L2 ganha tração significativa
 - Mudanças em ecossistema de chains
 
@@ -678,6 +739,7 @@ Todos os capítulos seguem esta estrutura:
 ### Formatação de Código
 
 **Solidity**:
+
 ````markdown
 ```solidity
 // SPDX-License-Identifier: MIT
@@ -690,6 +752,7 @@ contract Example {
 ````
 
 **JavaScript/TypeScript (Ethers.js v6)**:
+
 ````markdown
 ```javascript
 // Ethers.js v6
@@ -699,6 +762,7 @@ const contract = new ethers.Contract(ADDRESS, ABI, provider);
 ````
 
 **Bash**:
+
 ````markdown
 ```bash
 # Compilar com Foundry
@@ -712,16 +776,19 @@ forge test -vvv
 ### Naming Conventions
 
 **Arquivos**:
+
 - Capítulos: `EBOOK_CAPITULO_[N]_[SLUG].md`
 - Apêndices: `EBOOK_APENDICE_[LETRA]_[SLUG].md`
 - Exemplo: `EBOOK_CAPITULO_2_ANATOMIA_EVM.md`
 
 **Títulos**:
+
 - Capítulos: `# Capítulo [N]: [Título] - [Subtítulo]`
 - Seções: `## [N.X] [Título da Seção]`
 - Subseções: `### [Título]`
 
 **Glossário**:
+
 - **Termo em Negrito** seguido de blockquote com definição
 
 ### Callouts Padronizados
@@ -741,6 +808,7 @@ forge test -vvv
 ### Tom Geral
 
 **Características**:
+
 - ✅ **Técnico**: Profundo, detalhado, sem simplificações excessivas
 - ✅ **Direto**: Vai ao ponto, sem "fluff" desnecessário
 - ✅ **Honesto**: Admite limitações, trade-offs, quando algo é difícil
@@ -748,6 +816,7 @@ forge test -vvv
 - ✅ **Respeitoso**: Assume que o leitor é inteligente
 
 **Evitar**:
+
 - ❌ **Tom infantilizado**: "Vamos aprender juntos!"
 - ❌ **Hype**: "Blockchain vai mudar o mundo!"
 - ❌ **Condescendente**: "Isso é fácil"
@@ -809,6 +878,7 @@ forge test -vvv
 ### 3. Arquitetura First, Sintaxe Second
 
 **Ordem de apresentação**:
+
 1. Por que existe / que problema resolve
 2. Como funciona (alto nível)
 3. Arquitetura / design
@@ -829,11 +899,13 @@ forge test -vvv
 ```
 
 ✅ **Correto / Otimizado**:
+
 ```solidity
 // Código correto
 ```
 
 **Por que isso importa**: [Consequência]
+
 ```
 
 ### 5. Security-First Mindset
@@ -995,7 +1067,7 @@ Se for necessário adicionar novo capítulo ou apêndice:
 Revisões trimestrais/anuais:
 
 ```
-1. Ler EBOOK_STATUS_FINAL.md para overview
+1. Ler README.md para overview
 2. Revisar cada parte sequencialmente
 3. Verificar links em todos os capítulos
 4. Atualizar estatísticas e números
@@ -1010,21 +1082,25 @@ Revisões trimestrais/anuais:
 ### Indicadores de Qualidade Mantida
 
 ✅ **Código Funcional**:
+
 - Todos os exemplos compilam
 - Versões especificadas e atualizadas
 - Testados em ambiente local
 
 ✅ **Segurança Atualizada**:
+
 - Vulnerabilidades recentes cobertas
 - Ferramentas de auditoria atuais
 - Warnings sobre práticas obsoletas
 
 ✅ **Recursos Válidos**:
+
 - Links funcionam (< 5% quebrados)
 - Ferramentas recomendadas ativas
 - Comunidades relevantes
 
 ✅ **Consistência**:
+
 - Tom uniforme em todos capítulos
 - Formatação padronizada
 - Glossário sem conflitos
@@ -1032,12 +1108,14 @@ Revisões trimestrais/anuais:
 ### Sinais de Que Manutenção É Necessária
 
 ⚠️ **Atenção Necessária**:
+
 - Links quebrados > 5%
 - Exemplos não compilam
 - Ferramentas descontinuadas mencionadas
 - Versões antigas sem avisos
 
 🚨 **Urgente**:
+
 - Código vulnerável nos exemplos
 - Informações incorretas sobre segurança
 - Breaking changes não documentados
@@ -1050,18 +1128,21 @@ Revisões trimestrais/anuais:
 Após completar o ebook, o leitor pode construir:
 
 ### Iniciante (após Parte I-II)
+
 1. **Token ERC-20** com staking
 2. **NFT Collection** com metadata IPFS
 3. **Multisig Wallet** simples
 4. **Voting DAO** básico
 
 ### Intermediário (após Parte III)
+
 5. **DEX AMM** (Uniswap V2 clone)
 6. **Lending Protocol** (Compound-like)
 7. **Staking Vault** com rewards
 8. **Lottery com VRF** (Chainlink)
 
 ### Avançado (após Parte IV-V)
+
 9. **Full DeFi Protocol** (DEX + Lending + Staking)
 10. **Cross-chain Bridge** (simples)
 11. **DAO completo** com governança
