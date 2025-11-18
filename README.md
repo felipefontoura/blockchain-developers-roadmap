@@ -10,7 +10,7 @@
 
 Este ebook foi criado para desenvolvedores experientes que querem dominar blockchain development de forma rápida e profunda. Não é tutorial básico - assume conhecimento sólido de programação e foca no que é ÚNICO em blockchain.
 
-**Baseado em**: Roadmap do ITA Blockchain Club + experiência prática de produção
+**Baseado em**: Roadmap do ITA Blockchain Club + Claude.ai
 
 **Diferencial**:
 

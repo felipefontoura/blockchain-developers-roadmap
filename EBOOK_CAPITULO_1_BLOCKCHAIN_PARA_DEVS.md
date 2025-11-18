@@ -74,16 +74,17 @@ Sistema Centralizado:
 | **Autoridade** | Centralizada (admin DB) | Descentralizada (consenso) |
 | **Confiança** | Confiar no operador | Não precisa confiar (trustless) |
 | **Escrita** | Rápida (~ms) | Lenta (~segundos a minutos) |
-| **Throughput** | Alto (10,000+ TPS) | Baixo (15-50 TPS na mainnet) |
+| **Throughput** | Alto (10,000+ TPS) | L1: Baixo (12-15 TPS) / Com L2s: Alto (24k+ TPS*) |
 | **Custo** | Hardware + operação | Gas fees (pago por transação) |
 | **Consistência** | ACID garantido | Eventual consistency |
 | **Imutabilidade** | Mutável (UPDATE/DELETE) | Imutável (append-only) |
 | **Replicação** | Master-Slave ou Multi-Master | Full replication (1000s nodes) |
 | **Auditoria** | Logs podem ser alterados | Auditável por natureza |
 | **Falha** | Single point of failure | Tolerante a falhas (BFT) |
-| **Privacy** | Controle de acesso granular | Público por padrão* |
+| **Privacy** | Controle de acesso granular | Público por padrão** |
 
-*\*Blockchains públicas. Privadas têm controle de acesso.*
+*Após Dencun upgrade (Março 2024), Layer 2s escalam dramaticamente o throughput Ethereum.
+**Blockchains públicas. Privadas têm controle de acesso.*
 
 ### Arquitetura: Web2 vs Web3
 
@@ -305,19 +306,21 @@ tolerant         │
 
 | Blockchain | Descentralização | Segurança | Escalabilidade |
 |------------|------------------|-----------|----------------|
-| **Bitcoin** | ✅ Alta (15k+ nodes) | ✅ Alta (PoW) | ❌ Baixa (7 TPS) |
-| **Ethereum** | ✅ Alta (7k+ nodes) | ✅ Alta (PoS) | ❌ Baixa (15 TPS) |
+| **Bitcoin** | ✅ Alta (23k+ nodes) | ✅ Alta (PoW) | ❌ Baixa (7 TPS) |
+| **Ethereum** | ✅ Alta (18k+ nodes) | ✅ Alta (PoS) | L1: ❌ Baixa (15 TPS) / L2s: ✅ Alta (24k+ TPS) |
 | **Binance Chain** | ❌ Baixa (21 validadores) | ⚠️ Média | ✅ Alta (~1000 TPS) |
-| **Solana** | ⚠️ Média (1900 nodes) | ⚠️ Média (paradas) | ✅ Alta (3000 TPS) |
+| **Solana** | ⚠️ Média (~1,400 validators) | ⚠️ Média (paradas) | ✅ Alta (3000 TPS) |
 
 **Trade-offs**:
-- Bitcoin/Ethereum: Priorizou segurança + descentralização → sacrificou escalabilidade
+- Bitcoin/Ethereum: Priorizou segurança + descentralização → sacrificou escalabilidade L1
 - Binance/Solana: Priorizou escalabilidade → sacrificou descentralização
 
 **Soluções (Layer 2)**:
-- Mover transações para L2 (Arbitrum, Optimism)
+- Mover transações para L2 (Arbitrum, Optimism, Base, zkSync)
 - L1 mantém segurança, L2 ganha escalabilidade
-- Melhor dos dois mundos (teoricamente)
+- **Dencun upgrade (Março 2024)**: Proto-danksharding reduziu custos de L2 em 5-10x
+- **Fusaka upgrade (Dezembro 2025)**: PeerDAS escalará L2s mais 8x
+- Melhor dos dois mundos: Ethereum + L2s atingiram 24k+ TPS combinados (Nov 2025)
 
 ---
 
@@ -523,7 +526,7 @@ function transfer(address to, uint amount) public onlyAuthorized {
 **Full Node**
 > Node que baixa e valida todos os blocos desde genesis.
 > - Mantém state completo
-> - ~1TB de storage (Ethereum)
+> - ~2-4 TB de storage (Ethereum, Nov 2025) - recomendado 4TB NVMe SSD
 > - Valida tudo independentemente
 
 **Light Node**
@@ -535,7 +538,8 @@ function transfer(address to, uint amount) public onlyAuthorized {
 **Archive Node**
 > Full node que mantém TODOS os states históricos.
 > - Necessário para consultar state antigo
-> - ~12TB+ de storage (Ethereum)
+> - ~16-20 TB de storage (Ethereum Geth, Nov 2025)
+> - ~3-3.5 TB (Ethereum Erigon otimizado, Nov 2025)
 > - Usado por explorers (Etherscan)
 
 **Validator Node**
@@ -691,6 +695,8 @@ Antes de construir em blockchain, entenda:
 
 ## 🎯 Próximos Passos
 
+**⚡ Atualização Iminente**: Em Dezembro de 2025, Ethereum receberá o **Fusaka upgrade**, trazendo PeerDAS (Peer Data Availability Sampling). Isso permitirá que validators armazenem apenas 1/8 dos dados, escalando Layer 2s em até 8x e reduzindo custos de transação ainda mais. Após testes bem-sucedidos em Holesky, Sepolia e Hoodi testnets, o mainnet será atualizado em 3 de Dezembro.
+
 Agora que você entende **por que** e **quando** usar blockchain, está pronto para o mergulho técnico:
 
 → **Capítulo 2**: Anatomia da EVM - Como Funciona Por Baixo
@@ -721,7 +727,7 @@ Se a resposta é "censura, single point of failure, necessidade de confiança", 
 ---
 
 **Autor**: Baseado no material do ITA Blockchain Club + experiência prática de desenvolvimento
-**Última Atualização**: 2025-11-14
+**Última Atualização**: 2025-11-17 (Revisão técnica: storage requirements, Dencun/Fusaka context, node counts)
 **Feedback**: Issues/PRs bem-vindos
 
 ---

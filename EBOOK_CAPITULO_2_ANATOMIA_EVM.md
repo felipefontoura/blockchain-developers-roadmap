@@ -173,7 +173,9 @@ contract Example {
 
 **Custos de Gas**:
 - **SLOAD** (ler): 2,100 gas (cold) / 100 gas (warm)
-- **SSTORE** (escrever): 20,000 gas (novo) / 5,000 gas (update)
+- **SSTORE** (escrever): 20,000 gas (novo) / 5,000 gas (update)*
+
+*Nota técnica: SSTORE tem casos adicionais - zero→non-zero (cold: 22,100, warm: 20,000), changing existing (cold: 5,000, warm: 2,900), same value (cold: 2,200, warm: 100). Os números acima são os casos mais comuns. Ver [EIP-2929](https://eips.ethereum.org/EIPS/eip-2929) para detalhes completos sobre warm/cold access patterns introduzidos no Berlin hard fork (2021).
 
 💡 **Pro Tip**: Minimize writes no storage. Exemplo:
 
@@ -1054,6 +1056,24 @@ Packing economiza ~15,000 gas por SSTORE evitado!
 
 ## 🎯 Próximos Passos
 
+**⚡ Contexto do Ecossistema EVM (Nov 2025)**:
+
+Os custos de gas (SLOAD, SSTORE, opcodes) apresentados neste capítulo estão **estáveis desde o Berlin hard fork (2021)** e permanecem atuais. Porém, mudanças estão no horizonte:
+
+- **Pectra Upgrade (7 de Maio/2025)**: Próximo hard fork traz account abstraction (EIP-7702), melhorias em staking e otimizações de L2, mas **não altera custos de opcodes**. Foco em UX e escalabilidade via Layer 2s.
+
+- **EIP-7904 - General Repricing (em discussão)**: Proposta para repropricing geral de opcodes computacionais para refletir hardware real. Principais mudanças propostas:
+  - Redução de custos de hashing (KECCAK256, SHA256) em ~3x
+  - Alinhamento de custos com complexidade computacional real
+  - Previsto para upgrade Glamsterdam (data TBD, provavelmente 2026)
+  - Status: Draft, em discussão ativa
+
+- **Tendência**: Ethereum L1 mantém custos estáveis (segurança), escalabilidade via L2s (Arbitrum, Optimism, Base) que herdam segurança mas são 10-100x mais baratos.
+
+**Por que você precisa saber disso**: Ao desenvolver, projete para custos atuais, mas esteja ciente que operações computacionais podem ficar mais baratas no futuro (não conte com isso, mas não otimize prematuramente).
+
+---
+
 Agora que você entende **como** a EVM funciona, você está pronto para:
 
 → **Capítulo 3**: Solidity - A Linguagem e Suas Peculiaridades
@@ -1080,7 +1100,7 @@ Entender a EVM é como entender como memória funciona em C, ou como o garbage c
 ---
 
 **Autor**: Baseado no material do ITA Blockchain Club + experiência de desenvolvimento
-**Última Atualização**: 2025
+**Última Atualização**: 2025-11-17 (Revisão técnica: gas costs validados, contexto de upgrades Pectra/EIP-7904, nota sobre SSTORE detalhada)
 **Feedback**: [Abra uma issue no GitHub](#)
 
 ---

@@ -759,6 +759,19 @@ Escrever teste que:
 
 ## 🎯 Próximos Passos
 
+**💡 Foundry Atingiu Maturidade (2025)**:
+
+Foundry v1.0 foi lançado em **fevereiro de 2025**, marcando estabilidade de API e produção-ready após anos de desenvolvimento. Desde então:
+
+- **Versão atual**: v1.4.4 (Outubro 2025) - bugfixes e melhorias contínuas
+- **Adoção**: Projetos grandes migrando (Uniswap V4, Optimism, zkSync)
+- **Estabilidade**: API estável, sem breaking changes significativos desde v1.0
+- **Nightly builds**: Disponíveis para features experimentais
+
+**Recomendação**: Foundry está maduro para produção. Se você está começando um novo projeto em Nov/2025, Foundry é uma escolha sólida e moderna.
+
+---
+
 Com ambiente configurado, você está pronto para:
 
 → **Capítulo 5**: Design Patterns em Solidity
@@ -772,4 +785,4 @@ Com ambiente configurado, você está pronto para:
 ---
 
 **Autor**: Baseado em experiência com Foundry e Hardhat em produção
-**Última Atualização**: 2025-11-14
+**Última Atualização**: 2025-11-17 (Revisão técnica: Foundry v1.4.4, comandos validados, contexto v1.0 milestone)
