@@ -336,6 +336,310 @@ dex.swap(1 ether, minOut);
 
 ---
 
+## 🔍 Estudo de Caso: Uniswap V2 - DEX em Produção
+
+### Uniswap V2 Core
+
+**Contratos**: UniswapV2Pair, UniswapV2Factory, UniswapV2Router02
+**TVL**: ~$4B+ (todos os pools combinados)
+**Volume**: $500B+ all-time
+**Endereço Factory**: [0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f](https://etherscan.io/address/0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f)
+
+### Arquitetura: Core vs Periphery
+
+**Diferença fundamental**: Uniswap separa lógica essencial de conveniências
+
+```
+Core (UniswapV2Pair):
+- Minimal, immutable
+- Apenas funções essenciais
+- Nenhuma verificação de slippage
+- Difícil de usar diretamente
+
+Periphery (UniswapV2Router02):
+- Helper functions
+- Slippage protection
+- Path routing (A → B → C)
+- User-friendly
+```
+
+### Nossa Implementação vs Uniswap V2
+
+**SimpleDEX (Tutorial)**:
+```solidity
+contract SimpleDEX is ERC20 {
+    IERC20 public immutable token0;
+    IERC20 public immutable token1;
+
+    function swap(uint256 amountIn, uint256 minAmountOut) external {
+        // Tudo em 1 contrato
+        // Fácil de entender
+        // Menos flexível
+    }
+}
+```
+
+**Uniswap V2 (Produção)**:
+```solidity
+// CORE: UniswapV2Pair.sol (apenas o essencial)
+contract UniswapV2Pair is ERC20 {
+    // Sem amountIn/amountOut explícitos!
+    // Usa balance difference
+    function swap(
+        uint amount0Out,
+        uint amount1Out,
+        address to,
+        bytes calldata data
+    ) external {
+        // 1. Transfere tokens ANTES de calcular
+        if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out);
+        if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out);
+
+        // 2. Flash swap callback (se data != empty)
+        if (data.length > 0) IUniswapV2Callee(to).uniswapV2Call(msg.sender, amount0Out, amount1Out, data);
+
+        // 3. Verifica que x * y >= k (após)
+        uint balance0 = IERC20(_token0).balanceOf(address(this));
+        uint balance1 = IERC20(_token1).balanceOf(address(this));
+
+        uint amount0In = balance0 > _reserve0 - amount0Out ? balance0 - (_reserve0 - amount0Out) : 0;
+        uint amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
+
+        require(amount0In > 0 || amount1In > 0, 'UniswapV2: INSUFFICIENT_INPUT_AMOUNT');
+
+        // Constant product check (com fee)
+        uint balance0Adjusted = balance0.mul(1000).sub(amount0In.mul(3));
+        uint balance1Adjusted = balance1.mul(1000).sub(amount1In.mul(3));
+        require(balance0Adjusted.mul(balance1Adjusted) >= uint(_reserve0).mul(_reserve1).mul(1000**2), 'UniswapV2: K');
+
+        _update(balance0, balance1);
+    }
+}
+
+// PERIPHERY: UniswapV2Router02.sol (user-friendly)
+contract UniswapV2Router02 {
+    // Função que users realmente usam
+    function swapExactTokensForTokens(
+        uint amountIn,
+        uint amountOutMin,  // Slippage protection
+        address[] calldata path,  // Multi-hop: ETH → USDC → DAI
+        address to,
+        uint deadline  // Time limit
+    ) external returns (uint[] memory amounts) {
+        // 1. Calcula amounts para cada hop
+        amounts = UniswapV2Library.getAmountsOut(factory, amountIn, path);
+
+        // 2. Slippage check
+        require(amounts[amounts.length - 1] >= amountOutMin, 'INSUFFICIENT_OUTPUT_AMOUNT');
+
+        // 3. Transfer first token to pair
+        TransferHelper.safeTransferFrom(path[0], msg.sender, UniswapV2Library.pairFor(factory, path[0], path[1]), amounts[0]);
+
+        // 4. Execute swaps
+        _swap(amounts, path, to);
+    }
+}
+```
+
+### Diferenças-Chave: Tutorial → Produção
+
+| Aspecto | SimpleDEX (Tutorial) | Uniswap V2 (Produção) | Por Quê |
+|---------|----------------------|-----------------------|---------|
+| **Arquitetura** | Monolítico (1 contrato) | Core + Periphery | Core imutável, Router upgradeável |
+| **Swap Input** | `amountIn` explícito | Balance difference | Permite flash swaps |
+| **Slippage** | Verificado no contrato | Verificado no router | Core não opina sobre preços |
+| **Multi-hop** | ❌ Não suporta | ✅ A → B → C | Routing otimizado |
+| **Flash Loans** | ❌ Não | ✅ Flash swaps nativos | Receive before pay |
+| **Deadline** | ❌ Não | ✅ Sim | Previne stuck transactions |
+| **Gas Optimization** | Básico | Extremo | Milhões em volume = cada gas importa |
+| **WETH handling** | Manual | Auto unwrap/wrap | UX: Usar ETH nativo |
+
+### Flash Swaps - Killer Feature
+
+**O que são**: Receber tokens ANTES de pagar!
+
+```solidity
+// Exemplo: Flash swap no Uniswap V2
+contract FlashSwapper {
+    function executeFlashSwap() external {
+        address pair = IUniswapV2Factory(FACTORY).getPair(WETH, USDC);
+
+        // 1. Pedir 1000 USDC (sem pagar ainda!)
+        bytes memory data = abi.encode(WETH, msg.sender);
+        IUniswapV2Pair(pair).swap(0, 1000e6, address(this), data);
+
+        // 2. Uniswap chama nosso callback aqui ↓
+    }
+
+    // Callback obrigatório
+    function uniswapV2Call(address sender, uint amount0, uint amount1, bytes calldata data) external {
+        // Temos 1000 USDC aqui!
+        // Fazer algo lucrativo...
+
+        // Devolver 1000 USDC + fee (0.3%)
+        uint amountToRepay = amount1 * 1003 / 1000;
+        IERC20(USDC).transfer(msg.sender, amountToRepay);
+    }
+}
+```
+
+**Casos de uso**:
+- Arbitrage sem capital inicial
+- Liquidações em lending protocols
+- Refinanciamento de dívidas
+
+### Factory Pattern - Criando Pools
+
+**SimpleDEX**: Deploy manual de cada pool
+
+**Uniswap V2**: Factory cria pools automaticamente
+
+```solidity
+contract UniswapV2Factory {
+    mapping(address => mapping(address => address)) public getPair;
+    address[] public allPairs;
+
+    function createPair(address tokenA, address tokenB) external returns (address pair) {
+        require(tokenA != tokenB, 'IDENTICAL_ADDRESSES');
+
+        (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+        require(token0 != address(0), 'ZERO_ADDRESS');
+        require(getPair[token0][token1] == address(0), 'PAIR_EXISTS');
+
+        // Deploy novo par usando CREATE2 (endereço determinístico!)
+        bytes memory bytecode = type(UniswapV2Pair).creationCode;
+        bytes32 salt = keccak256(abi.encodePacked(token0, token1));
+        assembly {
+            pair := create2(0, add(bytecode, 32), mload(bytecode), salt)
+        }
+
+        IUniswapV2Pair(pair).initialize(token0, token1);
+
+        getPair[token0][token1] = pair;
+        getPair[token1][token0] = pair; // Reverse mapping
+        allPairs.push(pair);
+
+        emit PairCreated(token0, token1, pair, allPairs.length);
+    }
+}
+```
+
+**Por que CREATE2?** Endereço previsível sem deploying!
+
+```solidity
+// Qualquer um pode calcular endereço do pair sem chamada on-chain
+function pairFor(address factory, address tokenA, address tokenB) internal pure returns (address pair) {
+    (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+    pair = address(uint160(uint256(keccak256(abi.encodePacked(
+        hex'ff',
+        factory,
+        keccak256(abi.encodePacked(token0, token1)),
+        hex'96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f' // init code hash
+    )))));
+}
+```
+
+### Otimizações de Gas Avançadas
+
+```solidity
+// 1. STORAGE vs MEMORY
+// ❌ Nossa versão: Reler storage
+reserve0 = token0.balanceOf(address(this));
+reserve1 = token1.balanceOf(address(this));
+
+// ✅ Uniswap: Cache em memory, escreve 1x no final
+uint112 _reserve0 = reserve0;  // SLOAD (2100 gas)
+uint112 _reserve1 = reserve1;
+// ... cálculos com _reserve0, _reserve1 (memory)
+reserve0 = newReserve0;  // SSTORE (5000 gas) - 1x só
+reserve1 = newReserve1;
+
+// 2. PACKING de storage
+// Nossa versão: 2 slots (2 * 20k gas)
+uint256 public reserve0;
+uint256 public reserve1;
+
+// Uniswap: 1 slot! (1 * 20k gas)
+uint112 private reserve0;  // 112 bits suficiente
+uint112 private reserve1;
+uint32  private blockTimestampLast;  // Bonus: timestamp cabe no mesmo slot!
+
+// 3. Unchecked math (Solidity < 0.8)
+// Overflow checks custam gas
+// Uniswap usa SafeMath seletivamente
+```
+
+### TWAP Oracles Integrados
+
+```solidity
+// Uniswap V2 automaticamente trackeia preços
+uint public price0CumulativeLast;
+uint public price1CumulativeLast;
+uint32 public blockTimestampLast;
+
+function _update(uint balance0, uint balance1, uint112 _reserve0, uint112 _reserve1) private {
+    uint32 blockTimestamp = uint32(block.timestamp % 2**32);
+    uint32 timeElapsed = blockTimestamp - blockTimestampLast;
+
+    if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
+        // * never overflows, + overflow is desired
+        price0CumulativeLast += uint(UQ112x112.encode(_reserve1).uqdiv(_reserve0)) * timeElapsed;
+        price1CumulativeLast += uint(UQ112x112.encode(_reserve0).uqdiv(_reserve1)) * timeElapsed;
+    }
+
+    reserve0 = uint112(balance0);
+    reserve1 = uint112(balance1);
+    blockTimestampLast = blockTimestamp;
+}
+```
+
+**Uso**: Lending protocols usam isso como oracle!
+
+### Minimum Liquidity Lock
+
+```solidity
+// UniswapV2Pair: Primeira liquidez
+uint public constant MINIMUM_LIQUIDITY = 10**3;
+
+if (_totalSupply == 0) {
+    liquidity = Math.sqrt(amount0.mul(amount1)).sub(MINIMUM_LIQUIDITY);
+    _mint(address(0), MINIMUM_LIQUIDITY); // Lock permanente!
+} else {
+    liquidity = Math.min(amount0.mul(_totalSupply) / _reserve0, amount1.mul(_totalSupply) / _reserve1);
+}
+```
+
+**Por quê?** Prevenir ataque de inflação do primeiro LP:
+- Sem lock: Alice adiciona 1 wei ETH + 1 wei USDC → recebe 1 LP token
+- Alice transfere 1000 ETH pro pool diretamente
+- Bob adiciona liquidez → recebe 0 LP tokens (arredonda pra baixo!)
+- Alice rouba liquidez do Bob
+
+**Com MINIMUM_LIQUIDITY**: Primeira mint queima 1000 wei permanentemente, tornando ataque caro.
+
+### Lições para Produção
+
+1. **Separe Core de Periphery**: Core imutável, Router pode evoluir
+2. **Use balance difference, não input amounts**: Permite flash swaps
+3. **Factory pattern + CREATE2**: Endereços determinísticos, sem deploy centralizado
+4. **TWAP integrado**: Outros protocolos usam como oracle
+5. **Storage packing**: uint112 + uint112 + uint32 = 1 slot = 15k gas saved
+6. **Minimum liquidity**: Queimar primeiros LP tokens previne ataques
+7. **Skim/Sync functions**: Lidar com donations e fees on transfer tokens
+8. **Checks após actions**: Permite flash swaps, mas valida no final
+
+### Comparação Uniswap V2 vs V3
+
+| Feature | V2 | V3 | Quando Usar |
+|---------|----|----|-------------|
+| **Liquidez** | Full range | Concentrated | V3 para stablecoins, V2 para volatile |
+| **LP positions** | Fungível (ERC-20) | NFT (ERC-721) | V2 mais simples para composability |
+| **Gas (swap)** | ~100k | ~130k | V2 mais barato |
+| **Capital efficiency** | Baixa | Alta | V3 para LPs profissionais |
+| **Complexidade** | Simples | Complexo | V2 para começar |
+
+---
+
 ## 10.5 Lending Protocols
 
 ### Como Lending Funciona
@@ -546,6 +850,477 @@ contract InterestRateModel {
     }
 }
 ```
+
+---
+
+## 🔍 Estudo de Caso: Aave V3 - Lending Protocol em Produção
+
+### Aave Protocol
+
+**Protocolo**: Aave V3
+**TVL**: ~$20B+ (cross-chain)
+**Endereço (Ethereum)**: [0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2](https://etherscan.io/address/0x87870bca3f3fd6335c3f4ce8392d69350b4fa4e2)
+**Ativos suportados**: 30+ tokens
+**Chains**: Ethereum, Polygon, Arbitrum, Optimism, Avalanche, Base
+
+### Arquitetura: Pool-Based vs Isolated Markets
+
+**Nossa implementação**: 1 contrato, 1 par de tokens
+
+**Aave**: Pool único com múltiplos assets
+
+```
+SimpleLending:
+- 1 contrato por par (WETH/USDC)
+- Deploy novo para cada market
+- Liquidez fragmentada
+
+Aave:
+- 1 Pool para TODOS os assets
+- Compartilham liquidez
+- Eficiência de capital máxima
+- Cross-collateral (deposita ETH, pega DAI)
+```
+
+### Nossa Implementação vs Aave V3
+
+**SimpleLending (Tutorial)**:
+```solidity
+contract SimpleLending {
+    IERC20 public collateralToken;
+    IERC20 public borrowToken;
+
+    mapping(address => uint256) public collateral;
+    mapping(address => uint256) public borrowed;
+}
+```
+
+**Aave V3 (Produção)**:
+```solidity
+// CORE: Pool.sol (gerencia TODOS os assets)
+contract Pool {
+    // Cada asset tem sua configuração
+    mapping(address => DataTypes.ReserveData) internal _reserves;
+    mapping(uint256 => address) internal _reservesList;
+    mapping(address => DataTypes.UserConfigurationMap) internal _usersConfig;
+
+    // Supply (depositar)
+    function supply(
+        address asset,
+        uint256 amount,
+        address onBehalfOf,
+        uint16 referralCode
+    ) external {
+        DataTypes.ReserveData storage reserve = _reserves[asset];
+
+        // Valida reserve
+        ValidationLogic.validateSupply(reserve, amount);
+
+        // Transfer asset
+        IERC20(asset).safeTransferFrom(msg.sender, reserve.aTokenAddress, amount);
+
+        // Mint aTokens (interest-bearing tokens)
+        IAToken(reserve.aTokenAddress).mint(
+            onBehalfOf,
+            amount,
+            reserve.liquidityIndex
+        );
+
+        emit Supply(asset, msg.sender, onBehalfOf, amount, referralCode);
+    }
+
+    // Borrow
+    function borrow(
+        address asset,
+        uint256 amount,
+        uint256 interestRateMode, // 1 = Stable, 2 = Variable
+        uint16 referralCode,
+        address onBehalfOf
+    ) external {
+        DataTypes.ReserveData storage reserve = _reserves[asset];
+
+        // Valida borrow
+        (bool isActive, , , bool borrowingEnabled, bool stableBorrowEnabled) = reserve.getFlags();
+        require(isActive && borrowingEnabled, "Reserve not active");
+
+        // Check collateral & health factor
+        (uint256 totalCollateralBase, uint256 totalDebtBase, , , uint256 healthFactor) =
+            GenericLogic.calculateUserAccountData(/*...*/);
+
+        require(healthFactor >= 1e18, "Health factor too low");
+
+        // Update state
+        reserve.updateState();
+
+        // Update rates
+        reserve.updateInterestRates(asset, reserve.aTokenAddress, 0, amount);
+
+        // Mint debt tokens
+        if (interestRateMode == 2) {
+            IVariableDebtToken(reserve.variableDebtTokenAddress).mint(
+                onBehalfOf,
+                amount,
+                reserve.variableBorrowIndex
+            );
+        }
+
+        // Transfer asset to user
+        IAToken(reserve.aTokenAddress).transferUnderlyingTo(msg.sender, amount);
+
+        emit Borrow(asset, msg.sender, onBehalfOf, amount, interestRateMode, reserve.currentVariableBorrowRate, referralCode);
+    }
+}
+```
+
+### Diferenças-Chave: Tutorial → Produção
+
+| Aspecto | SimpleLending | Aave V3 | Por Quê |
+|---------|---------------|---------|---------|
+| **Arquitetura** | 1 par de tokens | Pool com 30+ assets | Eficiência de capital, cross-collateral |
+| **Juros** | Fixo ou simples | Compound interest | Precisão, incentivos dinâmicos |
+| **Collateral** | Único tipo | Múltiplos assets | Flexibilidade (ETH + LINK + UNI) |
+| **Interest Tokens** | Nenhum | aTokens (ERC-20) | Composability, yield auto-compounding |
+| **Debt Tokens** | Mapping interno | debtTokens (ERC-20) | Transferível, integração DeFi |
+| **Taxas** | Simples (1 rate) | Stable vs Variable | Choice para borrowers |
+| **Isolation Mode** | ❌ Não | ✅ Sim | Protege protocolo de assets arriscados |
+| **E-Mode** | ❌ Não | ✅ Efficiency mode | LTV 97% para stablecoins correlacionadas |
+| **Flash Loans** | ❌ Não | ✅ Nativo | Revenue + utilidade |
+| **Liquidations** | All-or-nothing | Parcial + Dutch auction | Menos disruptivo, mais eficiente |
+
+### aTokens - Interest-Bearing Tokens
+
+**Inovação-chave do Aave**: Seu depósito é um token ERC-20!
+
+```solidity
+// Você deposita 100 USDC
+aave.supply(USDC, 100e6, msg.sender, 0);
+
+// Recebe 100 aUSDC (aToken)
+// aUSDC.balanceOf(msg.sender) = 100e6
+
+// Após 1 ano (assumindo 5% APY)
+// aUSDC.balanceOf(msg.sender) = 105e6 (cresce automaticamente!)
+
+// aTokens são ERC-20, então:
+- Transferível
+- Usável como colateral em outros protocolos
+- Composable (yield-bearing collateral)
+```
+
+**Implementação de aToken**:
+```solidity
+contract AToken is ERC20 {
+    // Balance cresce com juros automaticamente
+    function balanceOf(address user) public view override returns (uint256) {
+        return super.balanceOf(user).rayMul(pool.getReserveNormalizedIncome(underlyingAsset));
+    }
+
+    // Scaled balance (sem juros acumulados)
+    function scaledBalanceOf(address user) public view returns (uint256) {
+        return super.balanceOf(user);
+    }
+
+    // Mint com scaling
+    function mint(
+        address user,
+        uint256 amount,
+        uint256 index
+    ) external onlyPool returns (bool) {
+        uint256 amountScaled = amount.rayDiv(index);
+        _mint(user, amountScaled);
+        return true;
+    }
+}
+```
+
+**Por que scaling?** Evita atualizar saldo de TODOS users a cada bloco!
+
+### Debt Tokens - Dívida Como ERC-20
+
+```solidity
+// Stable Debt Token (taxa fixa)
+contract StableDebtToken is ERC20 {
+    // Não transferível (soulbound)
+    function transfer(address, uint256) public override returns (bool) {
+        revert("TRANSFER_NOT_SUPPORTED");
+    }
+
+    // Balance cresce com juros
+    function balanceOf(address user) public view override returns (uint256) {
+        uint256 accountBalance = super.balanceOf(user);
+        uint256 stableRate = _userStableRates[user];
+        return accountBalance.rayMul(_calculateCompoundedInterest(stableRate, _timestamps[user]));
+    }
+}
+
+// Variable Debt Token (taxa variável)
+contract VariableDebtToken is ERC20 {
+    // Similar, mas usa taxa variável do pool
+    function balanceOf(address user) public view override returns (uint256) {
+        return super.balanceOf(user).rayMul(pool.getReserveNormalizedVariableDebt(underlyingAsset));
+    }
+}
+```
+
+**Vantagem**: Debt position é visível on-chain como token!
+
+### Health Factor Avançado
+
+**Nossa versão**: LTV simples
+
+**Aave**: Health factor considerando TODOS colaterais e dívidas
+
+```solidity
+function calculateUserAccountData(address user)
+    returns (
+        uint256 totalCollateralBase,
+        uint256 totalDebtBase,
+        uint256 availableBorrowsBase,
+        uint256 currentLiquidationThreshold,
+        uint256 ltv,
+        uint256 healthFactor
+    )
+{
+    // Itera todos os assets que user tem
+    for (uint256 i = 0; i < reservesCount; i++) {
+        if (userConfig.isUsingAsCollateral(i)) {
+            (uint256 balance, , , , ) = reserve.aTokenAddress.balanceOf(user);
+            uint256 valueInBase = balance * assetPrice;
+
+            totalCollateralBase += valueInBase * reserve.ltv;
+            currentLiquidationThreshold += valueInBase * reserve.liquidationThreshold;
+        }
+
+        if (userConfig.isBorrowing(i)) {
+            uint256 debt = reserve.debtToken.balanceOf(user);
+            totalDebtBase += debt * assetPrice;
+        }
+    }
+
+    // Health factor = (Collateral * Liquidation Threshold) / Total Debt
+    healthFactor = (totalCollateralBase * currentLiquidationThreshold) / totalDebtBase;
+
+    // healthFactor < 1e18 = liquidatable
+}
+```
+
+### E-Mode (Efficiency Mode)
+
+**Problema**: ETH e stETH são quase 1:1, mas LTV é 75%
+
+**Solução Aave V3**: E-Mode com LTV até 97%!
+
+```solidity
+// Definir categorias de assets correlacionados
+eModeCategoryData[1] = {
+    ltv: 9700,  // 97%
+    liquidationThreshold: 9800,  // 98%
+    liquidationBonus: 10100,  // 1% bonus
+    priceSource: address(0),  // Use oracle padrão
+    label: "ETH correlated"
+};
+
+// User entra em E-Mode para categoria ETH
+pool.setUserEMode(1);
+
+// Agora pode emprestar 97 ETH contra 100 stETH!
+```
+
+**Trade-off**: Só pode pegar emprestado assets da mesma categoria.
+
+### Isolation Mode
+
+**Problema**: Como listar assets novos sem arriscar protocolo inteiro?
+
+**Solução Aave V3**: Isolation mode!
+
+```solidity
+// Asset novo (ex: SHIB) marcado como "isolated"
+reserve.setIsolated(true);
+reserve.setDebtCeiling(1_000_000e18); // Max $1M debt
+
+// Se user usa SHIB como collateral:
+- Só pode pegar emprestado stablecoins
+- Limited to debt ceiling
+- Protege protocolo de assets voláteis
+```
+
+### Flash Loans Nativos
+
+**Nossa versão**: Não suporta
+
+**Aave**: Flash loans como feature core
+
+```solidity
+contract Pool {
+    function flashLoan(
+        address receiverAddress,
+        address[] calldata assets,
+        uint256[] calldata amounts,
+        uint256[] calldata modes, // 0 = no debt, 1 = stable, 2 = variable
+        address onBehalfOf,
+        bytes calldata params,
+        uint16 referralCode
+    ) external {
+        // 1. Valida
+        // 2. Transfer assets to receiver
+        for (uint256 i = 0; i < assets.length; i++) {
+            IAToken(reserves[assets[i]].aTokenAddress).transferUnderlyingTo(receiverAddress, amounts[i]);
+        }
+
+        // 3. Callback
+        require(
+            IFlashLoanReceiver(receiverAddress).executeOperation(
+                assets,
+                amounts,
+                premiums, // 0.09% fee
+                msg.sender,
+                params
+            ),
+            "Flash loan callback failed"
+        );
+
+        // 4. Verifica repayment (ou abre dívida se mode != 0)
+        for (uint256 i = 0; i < assets.length; i++) {
+            if (modes[i] == 0) {
+                // Repay + premium
+                require(
+                    IERC20(assets[i]).balanceOf(aTokenAddress) >= amountPlusPremium,
+                    "Flash loan not repaid"
+                );
+            } else {
+                // Abre dívida (flash loan vira empréstimo!)
+                _executeBorrow(/*...*/);
+            }
+        }
+    }
+}
+```
+
+**Revenue do protocolo**: 0.09% fee em bilhões de volume = milhões em fees!
+
+### Liquidações Avançadas
+
+**Nossa versão**: Liquidate tudo
+
+**Aave**: Liquidações parciais + Dutch auction
+
+```solidity
+function liquidationCall(
+    address collateralAsset,
+    address debtAsset,
+    address user,
+    uint256 debtToCover,
+    bool receiveAToken
+) external {
+    // 1. Valida health factor < 1
+    require(healthFactor < 1e18, "Position is healthy");
+
+    // 2. Limite de liquidação parcial (50% max)
+    uint256 maxLiquidatableDebt = (userDebt * CLOSE_FACTOR) / 10000; // 50%
+    uint256 actualDebtToLiquidate = min(debtToCover, maxLiquidatableDebt);
+
+    // 3. Bonus para liquidator (5-10%)
+    uint256 bonusCollateral = actualDebtToLiquidate * (10000 + liquidationBonus) / 10000;
+
+    // 4. Transfer debt from liquidator
+    IERC20(debtAsset).transferFrom(msg.sender, aTokenAddress, actualDebtToLiquidate);
+
+    // 5. Transfer collateral to liquidator
+    if (receiveAToken) {
+        // Recebe aToken (mantém yield)
+        aToken.transferFrom(user, msg.sender, bonusCollateral);
+    } else {
+        // Recebe underlying asset
+        aToken.burn(user, bonusCollateral);
+        IERC20(collateralAsset).transfer(msg.sender, bonusCollateral);
+    }
+
+    emit LiquidationCall(/*...*/);
+}
+```
+
+**Vantagens**:
+- Parcial: Não liquida tudo de uma vez
+- Bonus dinâmico: Aumenta se health factor muito baixo
+- receiveAToken option: Liquidator pode ficar com yield
+
+### Interest Rate Strategy
+
+**Nossa versão**: Linear simples
+
+**Aave**: Kinked rate model (2 slopes)
+
+```solidity
+contract DefaultReserveInterestRateStrategy {
+    // Model com 2 slopes (kink)
+    uint256 immutable OPTIMAL_UTILIZATION_RATE; // Ex: 80%
+    uint256 immutable BASE_VARIABLE_BORROW_RATE; // 0%
+    uint256 immutable VARIABLE_RATE_SLOPE1; // Slope até optimal
+    uint256 immutable VARIABLE_RATE_SLOPE2; // Slope após optimal
+
+    function calculateInterestRates(
+        uint256 liquidityAdded,
+        uint256 liquidityTaken,
+        uint256 totalVariableDebt,
+        uint256 reserveFactor
+    ) external view returns (uint256, uint256) {
+        uint256 totalDebt = totalVariableDebt;
+        uint256 totalLiquidity = liquidityAdded + totalVariableDebt;
+
+        uint256 utilizationRate = totalDebt / totalLiquidity;
+
+        uint256 variableBorrowRate;
+
+        if (utilizationRate <= OPTIMAL_UTILIZATION_RATE) {
+            // Slope suave (0-80% utilization)
+            variableBorrowRate = BASE_VARIABLE_BORROW_RATE +
+                (utilizationRate * VARIABLE_RATE_SLOPE1) / OPTIMAL_UTILIZATION_RATE;
+        } else {
+            // Slope íngreme (80-100% utilization)
+            uint256 excessUtil = utilizationRate - OPTIMAL_UTILIZATION_RATE;
+            variableBorrowRate = BASE_VARIABLE_BORROW_RATE +
+                VARIABLE_RATE_SLOPE1 +
+                (excessUtil * VARIABLE_RATE_SLOPE2) / (1e27 - OPTIMAL_UTILIZATION_RATE);
+        }
+
+        uint256 supplyRate = (variableBorrowRate * utilizationRate * (10000 - reserveFactor)) / 10000;
+
+        return (supplyRate, variableBorrowRate);
+    }
+}
+```
+
+**Exemplo**:
+```
+0-80% utilization: 0% → 4% (gradual)
+80-100% utilization: 4% → 80% (íngreme!) ← Incentiva repayments
+```
+
+### Lições para Produção
+
+1. **Tokens para positions**: aTokens e debtTokens permitem composability
+2. **Scaling vs Balance updates**: Evita atualizar milhares de users
+3. **Multi-asset pool**: Compartilha liquidez, cross-collateral
+4. **E-Mode**: High LTV para assets correlacionados (stablecoins, ETH derivatives)
+5. **Isolation mode**: Liste assets novos com risco controlado
+6. **Flash loans**: Revenue stream + útil pro ecossistema
+7. **Partial liquidations**: Menos disruptivo para borrowers
+8. **Kinked interest model**: Incentiva utilization ideal
+9. **Modular design**: ReserveLogic, ValidationLogic, LiquidationLogic separados
+10. **Upgradeable via proxy**: Bug fixes sem migração completa
+
+### Comparação: Aave vs Compound
+
+| Feature | Aave | Compound | Quando Usar |
+|---------|------|----------|-------------|
+| **Interest tokens** | aTokens (1:1 + yield) | cTokens (compounding ratio) | Aave mais intuitivo |
+| **Collateral** | Toggle per asset | Automatic | Aave mais flexível |
+| **Flash loans** | ✅ Nativo | ❌ Não | Aave para arbitrage |
+| **E-Mode** | ✅ Sim | ❌ Não | Aave para stablecoins |
+| **Stable rates** | ✅ Sim | ❌ Só variable | Aave para previsibilidade |
+| **Governance** | AAVE token | COMP token | Similar |
+| **TVL** | ~$20B | ~$3B | Aave domina atualmente |
 
 ---
 
@@ -1047,4 +1822,5 @@ Agora você pode construir protocolos DeFi reais! Combine:
 ---
 
 **Autor**: Baseado em roadmap ITA Blockchain Club + análise de protocolos reais (Uniswap V2, Aave, Compound)
-**Última Atualização**: 2025-11-14
+**Última Atualização**: 2025-01-17
+**Changelog**: Adicionados estudos de caso detalhados de Uniswap V2 e Aave V3 com análises de arquitetura, otimizações e diferenças entre implementações tutorial vs produção

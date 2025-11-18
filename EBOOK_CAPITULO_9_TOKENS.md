@@ -103,6 +103,125 @@ token.transferFrom(userAddress, dexAddress, 1000);
 
 ---
 
+## 🔍 Estudo de Caso: USDC e USDT - ERC-20 em Produção
+
+### USDC - Centre Consortium
+
+**Contrato**: USDC (USD Coin)
+**Endereço Ethereum**: [0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48](https://etherscan.io/token/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48)
+**Market Cap**: ~$30B+
+**Uso**: Stablecoin mais usada em DeFi
+
+### Implementação Tutorial vs Produção
+
+**Nossa Implementação Tutorial**:
+```solidity
+// Simples, sem controles
+contract ERC20 {
+    function transfer(address to, uint256 amount) public returns (bool) {
+        balanceOf[msg.sender] -= amount;
+        balanceOf[to] += amount;
+        emit Transfer(msg.sender, to, amount);
+        return true;
+    }
+}
+```
+
+**USDC em Produção**:
+```solidity
+// USDC é upgradeable (usa proxy pattern)
+contract FiatTokenV2_2 is FiatTokenV2_1 {
+    // Blacklist capability
+    mapping(address => bool) internal blacklisted;
+
+    modifier notBlacklisted(address account) {
+        require(!blacklisted[account], "Blacklistable: account is blacklisted");
+        _;
+    }
+
+    // Pausable
+    bool public paused = false;
+
+    modifier whenNotPaused() {
+        require(!paused, "Pausable: paused");
+        _;
+    }
+
+    function transfer(address to, uint256 value)
+        external
+        override
+        whenNotPaused
+        notBlacklisted(msg.sender)
+        notBlacklisted(to)
+        returns (bool)
+    {
+        _transfer(msg.sender, to, value);
+        return true;
+    }
+
+    // Admin functions
+    function pause() external onlyPauser {
+        paused = true;
+        emit Pause();
+    }
+
+    function blacklist(address account) external onlyBlacklister {
+        blacklisted[account] = true;
+        emit Blacklisted(account);
+    }
+}
+```
+
+### Diferenças-Chave: Tutorial → Produção
+
+| Recurso | Tutorial | USDC (Produção) | Por Quê |
+|---------|----------|-----------------|---------|
+| **Upgradeable** | ❌ Não | ✅ Proxy Pattern | Corrigir bugs, adicionar features |
+| **Pausable** | ❌ Não | ✅ Emergency stop | Congelar em caso de exploit |
+| **Blacklist** | ❌ Não | ✅ Compliance/OFAC | Regulação, endereços sancionados |
+| **Role-based** | ❌ Simples owner | ✅ Multiple roles | Minter, Pauser, Blacklister separados |
+| **Gas Optimization** | ❌ Básico | ✅ Otimizado | Bilhões em volume, cada gas conta |
+
+### USDT - Tether (Caso Especial ⚠️)
+
+**Contrato**: USDT (Tether)
+**Endereço**: [0xdAC17F958D2ee523a2206206994597C13D831ec7](https://etherscan.io/token/0xdac17f958d2ee523a2206206994597c13d831ec7)
+**Market Cap**: ~$120B+
+
+**⚠️ USDT NÃO segue ERC-20 perfeitamente!**
+
+```solidity
+// ERC-20 padrão: transfer retorna bool
+function transfer(address to, uint256 value) external returns (bool);
+
+// USDT: NÃO retorna nada!
+function transfer(address to, uint value) public;
+```
+
+**Problema**: Código que espera `bool` pode quebrar!
+
+```solidity
+// ❌ Pode falhar com USDT!
+bool success = usdt.transfer(recipient, amount);
+require(success, "Transfer failed");
+
+// ✅ Solução: SafeERC20 (OpenZeppelin)
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+using SafeERC20 for IERC20;
+usdt.safeTransfer(recipient, amount); // Funciona!
+```
+
+### Lições para Produção
+
+1. **Sempre use SafeERC20**: Lida com tokens não-padrão (USDT)
+2. **Considere pausable**: Botão de emergência é crítico
+3. **Upgradeable é comum**: Stablecoins quase sempre são
+4. **Compliance existe**: Blacklist é realidade em stablecoins reguladas
+5. **Teste com tokens reais**: USDC/USDT/DAI, não só mocks
+
+---
+
 ## 9.2 ERC-721 - NFTs
 
 ### Interface
@@ -200,6 +319,175 @@ contract ERC721 {
     }
 }
 ```
+
+---
+
+## 🔍 Estudo de Caso: ERC721A - NFTs Otimizados para Produção
+
+### Azuki NFT Collection
+
+**Contrato**: Azuki
+**Endereço**: [0xED5AF388653567Af2F388E6224dC7C4b3241C544](https://etherscan.io/address/0xed5af388653567af2f388e6224dc7c4b3241c544)
+**Supply**: 10,000 NFTs
+**Volume**: $700M+ (all-time)
+**Inovação**: ERC721A - batch minting otimizado
+
+### O Problema com ERC-721 Padrão
+
+**Mint 5 NFTs tradicional**:
+```solidity
+// ❌ ERC-721 básico: 5 transações separadas
+for(uint i = 0; i < 5; i++) {
+    mint(msg.sender, tokenId++); // ~140k gas CADA = 700k total
+}
+```
+
+**Custo**: ~140k gas × 5 = **700k gas**
+
+**Por quê é caro?**
+- Cada `mint()` escreve no storage:
+  - `ownerOf[tokenId] = owner` (20k gas)
+  - `balanceOf[owner]++` (20k gas)
+  - Emit event (5k gas)
+
+### Solução: ERC721A
+
+**Criado por**: Chiru Labs (equipe Azuki)
+**Otimização**: Batch minting com storage otimizado
+
+```solidity
+// ✅ ERC721A: Mint 5 NFTs em 1 transação
+contract ERC721A {
+    // Struct para ownership + metadata
+    struct TokenOwnership {
+        address addr;
+        uint64 startTimestamp;
+    }
+
+    // Só grava owner do PRIMEIRO token do batch
+    mapping(uint256 => TokenOwnership) internal _ownerships;
+    mapping(address => uint256) internal _balances;
+
+    uint256 internal _currentIndex = 0;
+
+    function _safeMint(address to, uint256 quantity) internal {
+        uint256 startTokenId = _currentIndex;
+
+        // Apenas 1 write no storage para o batch inteiro!
+        _ownerships[startTokenId] = TokenOwnership(to, uint64(block.timestamp));
+
+        _balances[to] += quantity;
+        _currentIndex += quantity;
+
+        // Emit events para cada token
+        for (uint256 i = 0; i < quantity; i++) {
+            emit Transfer(address(0), to, startTokenId + i);
+        }
+    }
+
+    function ownerOf(uint256 tokenId) public view returns (address) {
+        require(tokenId < _currentIndex, "Token doesn't exist");
+
+        // Procura "para trás" até achar owner gravado
+        for (uint256 curr = tokenId; ; curr--) {
+            TokenOwnership memory ownership = _ownerships[curr];
+            if (ownership.addr != address(0)) {
+                return ownership.addr;
+            }
+        }
+    }
+}
+```
+
+### Como Funciona
+
+**Mint batch de 5 NFTs (IDs #100-104)**:
+```
+Storage write:
+_ownerships[100] = Alice  // Só grava o primeiro!
+_balances[Alice] += 5     // 1 write
+
+Tokens #101-104 não têm entry!
+```
+
+**Ao consultar `ownerOf(103)`**:
+```
+1. _ownerships[103] = 0x0 (vazio)
+2. _ownerships[102] = 0x0 (vazio)
+3. _ownerships[101] = 0x0 (vazio)
+4. _ownerships[100] = Alice ✓ (encontrou!)
+   → Retorna Alice
+```
+
+### Comparação de Gas
+
+| Operação | ERC-721 | ERC721A | Economia |
+|----------|---------|---------|----------|
+| Mint 1 NFT | ~140k gas | ~140k gas | 0% |
+| Mint 5 NFTs | ~700k gas | ~180k gas | **74%** 💰 |
+| Mint 10 NFTs | ~1.4M gas | ~220k gas | **84%** 💰 |
+| Transfer | ~50k gas | ~50k gas | 0% |
+| First transfer após batch mint | ~50k gas | ~70k gas | -40% ⚠️ |
+
+### Trade-offs do ERC721A
+
+**✅ Vantagens**:
+- **Mint em batch muito mais barato**: Essencial para collections de 10k
+- **Compatível com ERC-721**: Marketplaces funcionam normalmente
+- **Timestamp embutido**: Saber quando foi mintado
+
+**⚠️ Desvantagens**:
+- **Primeira transferência mais cara**: Precisa "preencher" ownership
+- **ownerOf() loop**: Mais gas em read (não afeta transações)
+- **Complexidade**: Mais difícil de auditar
+
+### Quando Usar ERC721A?
+
+**✅ Use se**:
+- NFT collection com mints em batch (5+ por vez)
+- Public mint onde users mintam múltiplos
+- Precisa minimizar gas de mint
+
+**❌ Não use se**:
+- Mint sempre 1 por vez
+- Transfers mais frequentes que mints
+- Precisa código simples para auditoria
+
+### Código Real da Azuki
+
+```solidity
+// Simplified from actual Azuki contract
+contract Azuki is ERC721A, Ownable {
+    uint256 public constant MAX_SUPPLY = 10000;
+    uint256 public constant MAX_PER_TX = 5;
+
+    function mint(uint256 quantity) external payable {
+        require(totalSupply() + quantity <= MAX_SUPPLY, "Sold out");
+        require(quantity <= MAX_PER_TX, "Max 5 per tx");
+        require(msg.value >= 1 ether * quantity, "Not enough ETH");
+
+        _safeMint(msg.sender, quantity); // ERC721A magic!
+    }
+}
+```
+
+### Lições para Produção
+
+1. **Otimize mint, não transfer**: Users mintam 1x, mas podem transferir 100x
+2. **Considere trade-offs**: Gas savings vs complexidade
+3. **ERC721A é padrão para 10k collections**: Usado por BAYC, Doodles, etc.
+4. **Sempre teste batch edge cases**: Batch de 1, de 100, etc.
+5. **Documentação crítica**: Código complexo precisa comentários
+
+### Alternativas Modernas
+
+**ERC721Psi** (PSI = Permanent Storage Increase):
+- Similar ao ERC721A
+- Melhor para transferências frequentes
+
+**ERC721Consecutive** (EIP-2309):
+- Padrão oficial para batch minting
+- Menos otimizado que ERC721A
 
 ---
 
@@ -373,3 +661,8 @@ Implemente token ERC-20 com:
 ---
 
 **Próximo**: Capítulo 10 - DeFi Primitives (usar tokens em DEXs, lending).
+
+---
+
+**Última Atualização**: 2025-01-17
+**Changelog**: Adicionados estudos de caso de contratos reais (USDC, USDT, ERC721A/Azuki)
